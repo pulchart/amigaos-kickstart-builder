@@ -55,9 +55,12 @@ def _c(text: str, *codes: str) -> str:
 
 _BOLD   = "\033[1m"
 _CYAN   = "\033[36m"
+_GREEN  = "\033[32m"
 _YELLOW = "\033[33m"
+_BLUE   = "\033[94m"
+_RED    = "\033[31m"
 
-__version__ = "1.1"
+__version__ = "1.2"
 __author__ = "Jaroslav Pulchart"
 __license__ = "MIT"
 
@@ -547,11 +550,41 @@ def run_capcli(workdir: Path, script: Path) -> Path:
 
 def _dump_log_tail(log: Path, n: int = 40) -> None:
     try:
-        lines = log.read_text(errors="replace").splitlines()
-        for line in lines[-n:]:
-            print(line, file=sys.stderr)
+        raw = log.read_text(errors="replace").splitlines()
     except OSError:
-        pass
+        return
+    meaningful = []
+    for line in raw:
+        # Each log line may be many "CapCLI> " prompts followed by actual output.
+        # Strip all prompt occurrences; skip lines that are pure prompt noise.
+        msg = line
+        while msg.startswith("CapCLI>"):
+            msg = msg[len("CapCLI>"):].lstrip()
+        msg = msg.strip()
+        if msg:
+            meaningful.append(msg)
+    if not meaningful:
+        return
+    print(f"{_c('--- Capitoline log (filtered) ---', _BOLD)}", file=sys.stderr)
+    for msg in meaningful[-n:]:
+        lc = msg.lower()
+        if "error" in lc or "not enough space" in lc or "no space" in lc:
+            print(_c(msg, _RED), file=sys.stderr)
+        elif "unable" in lc or "warning" in lc:
+            print(_c(msg, _YELLOW), file=sys.stderr)
+        else:
+            print(msg, file=sys.stderr)
+    print(f"{_c('---------------------------------', _BOLD)}", file=sys.stderr)
+
+
+def _bank_free(data: bytes) -> int:
+    """Return the size of the largest contiguous 0xFF run.
+
+    Capitoline fills unused ROM space with 0xFF.  The free region is a single
+    contiguous block between the last module and the ROM footer; the footer
+    itself is not 0xFF (it holds the checksum etc.), so rstrip gives 0.
+    """
+    return max((m.end() - m.start() for m in re.finditer(rb"\xff+", data)), default=0)
 
 
 def build_one(model: str, verbose: bool = True, name: str = "cfd") -> None:
@@ -619,14 +652,29 @@ def build_one(model: str, verbose: bool = True, name: str = "cfd") -> None:
         )
         lw = max(len(p.name) for p, _ in all_files)
 
+        # Read each file once; count 0xFF (free/erased) bytes for bank halves only.
+        file_rows: list[tuple[Path, str, int, str, int | None]] = []
+        for path, tag in all_files:
+            data = path.read_bytes()
+            sha  = hashlib.sha256(data).hexdigest()
+            free = _bank_free(data) if path.suffix in (".F8", ".E0") else None
+            file_rows.append((path, tag, len(data), sha, free))
+
+        free_vals = [fr for *_, fr in file_rows if fr is not None]
+        fw = max(len(f"{v:,}") for v in free_vals) if free_vals else 0
+
         rel = model_out.relative_to(REPO_ROOT)
         print(f"  Output: {_c(str(rel) + '/', _YELLOW)}")
-        for path, tag in all_files:
-            sz  = path.stat().st_size
-            sha = hashlib.sha256(path.read_bytes()).hexdigest()
-            fname = _c(path.name, _CYAN) + " " * (lw - len(path.name))
-            tag_s = f"{tag:>3}" if tag else "   "
-            print(f"    {fname}  {tag_s}  {sz:>12,} bytes  {sha}")
+        for path, tag, sz, sha, free in file_rows:
+            fname  = _c(path.name, _CYAN) + " " * (lw - len(path.name))
+            tag_s  = f"{tag:>3}" if tag else "   "
+            if free is not None:
+                pct = free / sz * 100
+                fc = _GREEN if pct > 50 else _BLUE if pct > 20 else _YELLOW if pct > 10 else _RED
+                free_s = _c(f"{free:{fw},} B free", fc)
+            else:
+                free_s = " " * (fw + 7)
+            print(f"    {fname}  {tag_s}  {sz:>12,} bytes  {free_s}  {sha}")
         if verbose:
             residents = scan_residents(rom)
             _annotate_residents(residents)

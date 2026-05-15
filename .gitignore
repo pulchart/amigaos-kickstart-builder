@@ -2,4 +2,3 @@ out/
 workdir_*/
 __pycache__/
 *.sh
-docs/ROMS.md

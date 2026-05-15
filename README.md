@@ -78,6 +78,7 @@ Use whatever EPROM / flash programmer you normally use; the builder produces sta
 ## Deeper docs
 
 - [docs/kickstart-scantable.md](docs/kickstart-scantable.md): how the 1 MB scantable redirect works across 3.2.3 / 3.1 / 2.0x and why each family uses a different mechanism.
+- [docs/ROMS.md](docs/ROMS.md): resident-module inventory across source Kickstart ROM (2.0x / 3.0 / 3.1 / 3.2.y).
 
 ## Licensing and IP boundary
 

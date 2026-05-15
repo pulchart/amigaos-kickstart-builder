@@ -2,26 +2,62 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Jaroslav Pulchart
 import sys
-
-if sys.version_info < (3, 10):
-    sys.exit(
-        f"kickstart.py requires Python 3.10+ "
-        f"(running on {sys.version.split()[0]})."
-    )
-
 import argparse
 import hashlib
 import os
+import re
 import shutil
+import struct
 import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+
+def _check_requirements() -> None:
+    """Exit with a helpful message if Python is too old or any package is missing."""
+    if sys.version_info < (3, 10):
+        sys.exit(
+            f"kickstart.py requires Python 3.10+ "
+            f"(running on {sys.version.split()[0]})."
+        )
+    missing = []
+    for pkg, inst in [
+        ("yaml",     "pyyaml"),
+        ("jinja2",   "jinja2"),
+        ("tabulate", "tabulate"),
+    ]:
+        try:
+            __import__(pkg)
+        except ImportError:
+            missing.append(f"  {pkg:<12}")
+    if missing:
+        sys.exit("Missing required packages:\n" + "\n".join(missing))
+
+
+_check_requirements()
+
 import yaml
 from jinja2 import Environment, FileSystemLoader
+from tabulate import tabulate
 
-__version__ = "1.0"
+# ---------------------------------------------------------------------------
+# Terminal colour helpers (auto-disabled when stdout is not a tty)
+# ---------------------------------------------------------------------------
+_COLOR = sys.stdout.isatty()
+
+
+def _c(text: str, *codes: str) -> str:
+    if not _COLOR:
+        return text
+    return "".join(codes) + text + "\033[0m"
+
+
+_BOLD   = "\033[1m"
+_CYAN   = "\033[36m"
+_YELLOW = "\033[33m"
+
+__version__ = "1.1"
 __author__ = "Jaroslav Pulchart"
 __license__ = "MIT"
 
@@ -78,7 +114,7 @@ MODELS = CONFIG["models"]
 
 
 def info(msg: str) -> None:
-    print(f"==>    {msg}")
+    print(msg)
 
 
 def die(msg: str, code: int = 1) -> None:
@@ -135,7 +171,7 @@ def _link_adf(adf_path: Path, workdir: Path) -> Path:
 
 
 def _handle_skip(r: dict, workdir: Path, by_rom: dict, patched: dict) -> None:
-    """`skip:` -- drop a stock F8 module entirely (no `rom:` allowed)."""
+    """`skip:` drop a stock F8 module entirely (no `rom:` allowed)."""
     target = r["skip"]
     if "rom" in r:
         die(f"`skip` row must not specify `rom:`, skipped modules "
@@ -145,7 +181,7 @@ def _handle_skip(r: dict, workdir: Path, by_rom: dict, patched: dict) -> None:
 
 
 def _handle_relocate(r: dict, workdir: Path, by_rom: dict, patched: dict) -> None:
-    """`relocate:` -- move a stock F8 module to E0 (keep stock content)."""
+    """`relocate:` move a stock F8 module to E0 (keep stock content)."""
     target = r["relocate"]
     _need_rom(r, allowed=("E0",))
     _ensure_unique_target(target, patched)
@@ -216,7 +252,7 @@ def _handle_adf(r: dict, workdir: Path, by_rom: dict, patched: dict) -> None:
 
 
 def _handle_file(r: dict, workdir: Path, by_rom: dict, patched: dict) -> None:
-    """`file:` -- add a file from disk to a ROM bank by basename."""
+    """`file:` add a file from disk to a ROM bank by basename."""
     rom = _need_rom(r)
     src = Path(r["file"])
     if not src.is_absolute():
@@ -226,6 +262,182 @@ def _handle_file(r: dict, workdir: Path, by_rom: dict, patched: dict) -> None:
     shutil.copy2(src, workdir / src.name)
     by_rom[rom].append(FileEntry(name=src.name))
 
+
+# ---------------------------------------------------------------------------
+# ROM resident scanner
+# ---------------------------------------------------------------------------
+
+_NT_NAMES: dict[int, str] = {
+    1: "task",
+    2: "int",
+    3: "dev",
+    4: "port",
+    5: "msg",
+    8: "res",
+    9: "lib",
+    10: "mem",
+    11: "sint",
+    14: "sem",
+}
+
+_ROM_F8_BASE = 0xF80000
+_ROM_E0_BASE = 0xE00000
+_ROM_HALF    = 0x80000   # 512 KB per bank
+
+
+def _rom_offset_to_addr(offset: int) -> int:
+    """Map a byte offset in the ROM binary -> Amiga ROM address."""
+    if offset < _ROM_HALF:
+        return _ROM_F8_BASE + offset
+    return _ROM_E0_BASE + (offset - _ROM_HALF)
+
+
+def _rom_addr_to_offset(addr: int) -> int | None:
+    """Map an Amiga ROM address -> byte offset in the ROM binary; None if outside both banks."""
+    if _ROM_F8_BASE <= addr < _ROM_F8_BASE + _ROM_HALF:
+        return addr - _ROM_F8_BASE
+    if _ROM_E0_BASE <= addr < _ROM_E0_BASE + _ROM_HALF:
+        return (addr - _ROM_E0_BASE) + _ROM_HALF
+    return None
+
+
+def _read_cstring(data: bytes, off: int | None) -> str:
+    """Return null-terminated Latin-1 string at *off* in *data*; '?' on failure.
+
+    Control characters (newlines, tabs, etc.) are collapsed to a single space
+    and leading/trailing whitespace is stripped.  AmigaOS IDStrings routinely
+    embed a leading or trailing \\n which would otherwise break table rows.
+    """
+    if off is None or off < 0 or off >= len(data):
+        return "?"
+    end = data.find(b"\x00", off)
+    if end == -1:
+        end = off + 256
+    try:
+        s = data[off:end].decode("latin-1")
+        s = " ".join(s.split())   # collapse all whitespace / control chars
+        return s or "?"
+    except Exception:
+        return "?"
+
+
+def scan_residents(rom_path: Path) -> list[dict]:
+    """Scan a 1 MB Amiga Kickstart ROM binary for Resident structures.
+
+    Scans every even offset for RTC_MATCHWORD (0x4AFC), then validates the
+    self-pointer (rt_MatchTag must equal the ROM address of the match word).
+
+    Address mapping for the combined 1 MB ROM binary:
+      - File bytes 0x00000-0x7FFFF: F8 bank (Amiga 0xF80000-0xFFFFFF)
+      - File bytes 0x80000-0xFFFFF: E0 bank (Amiga 0xE00000-0xE7FFFF)
+
+    Returns a list of dicts (F8-first, E0-second, in discovery order) with
+    keys: bank, rom_addr, rt_type, type_name, version, pri, name, idstring.
+    """
+    data = rom_path.read_bytes()
+    n = len(data)
+    results = []
+    i = 0
+    while i <= n - 26:
+        if data[i] == 0x4A and data[i + 1] == 0xFC:
+            rom_addr = _rom_offset_to_addr(i)
+            tag_addr = struct.unpack_from(">I", data, i + 2)[0]
+            if tag_addr == rom_addr:
+                endskip_addr = struct.unpack_from(">I", data, i + 6)[0]
+                rt_type  = data[i + 12]
+                version  = data[i + 11]
+                pri      = struct.unpack_from(">b", data, i + 13)[0]
+                name_off = _rom_addr_to_offset(struct.unpack_from(">I", data, i + 14)[0])
+                id_off   = _rom_addr_to_offset(struct.unpack_from(">I", data, i + 18)[0])
+                bank     = "F8" if i < _ROM_HALF else "E0"
+                results.append({
+                    "bank":         bank,
+                    "rom_addr":     rom_addr,
+                    "endskip_addr": endskip_addr,
+                    "rt_type":      rt_type,
+                    "type_name":    _NT_NAMES.get(rt_type, f"t{rt_type}"),
+                    "version":      version,
+                    "pri":          pri,
+                    "name":         _read_cstring(data, name_off),
+                    "idstring":     _read_cstring(data, id_off),
+                })
+        i += 2
+    return results
+
+
+def _annotate_residents(residents: list[dict]) -> None:
+    """Add a ``note`` key to each resident dict, derived purely from the scan.
+
+    When the same resident name appears more than once (e.g. workbench.library
+    in both F8 v40 and E0 v47), the lower-version copy will lose the
+    ResidentMatcher race at boot.  Flag it so the user can spot it in the table.
+    No build-config knowledge used.
+    """
+    by_name: dict[str, list[dict]] = defaultdict(list)
+    for r in residents:
+        r["note"] = ""
+        by_name[r["name"]].append(r)
+
+    for copies in by_name.values():
+        if len(copies) > 1:
+            max_ver = max(c["version"] for c in copies)
+            winner  = next(c for c in copies if c["version"] == max_ver)
+            for c in copies:
+                if c["version"] < max_ver:
+                    c["note"] = f"shadowed -> {winner['bank']} v{max_ver}"
+
+
+def _print_residents(model: str, residents: list[dict], rom_name: str = "ROM") -> None:
+    """Print a tabulated ROM resident report using tabulate.
+
+    Binary audit: every Resident structure found in the ROM is listed.
+    Same-name entries at lower rt_Version are annotated as shadowed (they lose
+    the ResidentMatcher race at boot to the higher-version copy).
+    """
+    ID_COL = 50
+
+    def trunc(s: str, n: int) -> str:
+        return s if len(s) <= n else s[:n - 1] + "..."
+
+    has_notes = any(r.get("note") for r in residents)
+    headers = ["Bank", "Addr", "Type", "Ver", "Pri", "Name", "IDString"]
+    if has_notes:
+        headers.append("Notes")
+
+    rows = []
+    for r in residents:
+        row: list = [
+            r["bank"],
+            f"{r['rom_addr']:06X}",
+            r["type_name"],
+            r["version"],
+            r["pri"],
+            r["name"],
+            trunc(r["idstring"], ID_COL),
+        ]
+        if has_notes:
+            row.append(r.get("note", ""))
+        rows.append(row)
+
+    n_shadowed = sum(1 for r in residents if r.get("note"))
+    summary = f"{len(residents)} found"
+    if n_shadowed:
+        summary += f", {n_shadowed} shadowed by higher version"
+
+    align = ("left", "left", "left", "right", "right", "left", "left")
+    if has_notes:
+        align = align + ("left",)
+
+    print(f"\n  Residents in {rom_name}: {model} ({summary}):")
+    for line in tabulate(rows, headers=headers, tablefmt="simple",
+                         colalign=align).splitlines():
+        print("  " + line)
+    print()
+
+
+# ---------------------------------------------------------------------------
+# Module resolution
+# ---------------------------------------------------------------------------
 
 def resolve_extra_modules(
     workdir: Path, cpu: str, os_: str
@@ -303,7 +515,6 @@ def render_template(
 
 def run_capcli(workdir: Path, script: Path) -> Path:
     """Run capcli.Linux from workdir with stdin from script. Returns log path."""
-    info("Running capcli.Linux...")
     log = workdir / "capitoline.log"
     with script.open("rb") as stdin, log.open("wb") as out:
         result = subprocess.run(
@@ -343,15 +554,14 @@ def _dump_log_tail(log: Path, n: int = 40) -> None:
         pass
 
 
-def build_one(model: str) -> None:
+def build_one(model: str, verbose: bool = True, name: str = "cfd") -> None:
     cfg = MODELS[model]
     cpu = cfg["cpu"]
     os_ = cfg["os"]
     amiga = cfg["amigaos_dir"]
 
-    info("==========================================================")
-    info(f"Building {model} ROM (OS {os_}, CPU {cpu})")
-    info("==========================================================")
+    print()
+    print(_c(f"  Building {model} ROM  (OS {os_}, CPU {cpu})", _BOLD, _CYAN))
 
     workdir = SCRIPT_DIR / f"workdir_{model}"
     if workdir.exists():
@@ -382,67 +592,145 @@ def build_one(model: str) -> None:
             shutil.rmtree(model_out)
         model_out.mkdir(parents=True)
 
-        rom = model_out / "cfd.rom"
+        rom = model_out / f"{name}.rom"
         with rom.open("wb") as out:
             out.write(f8.read_bytes())
             out.write(e0.read_bytes())
 
-        shutil.copy2(e0, model_out / "cfd.E0")
-        shutil.copy2(f8, model_out / "cfd.F8")
+        shutil.copy2(e0, model_out / f"{name}.E0")
+        shutil.copy2(f8, model_out / f"{name}.F8")
         shutil.copy2(log, model_out / "capitoline.log")
         shutil.copy2(script, model_out / "capitoline.script")
 
-        copied = 0
+        bin_files: list[Path] = []
         for f in sorted(workdir.glob("cfd*.bin")):
-            shutil.copy2(f, model_out / f.name)
-            copied += 1
+            dest_name = name + f.name[len("cfd"):]
+            dest = model_out / dest_name
+            shutil.copy2(f, dest)
+            bin_files.append(dest)
 
-        info(f"Output in {model_out}/:")
-        size = rom.stat().st_size
-        sha = hashlib.sha256(rom.read_bytes()).hexdigest()
-        print(f"       cfd.rom ({size} bytes)  sha256: {sha}")
-        print("       cfd.E0 / cfd.F8 (512 KB halves)")
-        print("       capitoline.log + capitoline.script")
-        if copied > 0:
-            print(f"       {copied} byteswapped split file(s) for EPROM burning")
+        f8_out = model_out / f"{name}.F8"
+        e0_out = model_out / f"{name}.E0"
+
+        all_files: list[tuple[Path, str]] = (
+            [(rom, "")]
+            + [(f8_out, "1/2"), (e0_out, "2/2")]
+            + [(bf, f"{i}/{len(bin_files)}") for i, bf in enumerate(bin_files, 1)]
+        )
+        lw = max(len(p.name) for p, _ in all_files)
+
+        rel = model_out.relative_to(REPO_ROOT)
+        print(f"  Output: {_c(str(rel) + '/', _YELLOW)}")
+        for path, tag in all_files:
+            sz  = path.stat().st_size
+            sha = hashlib.sha256(path.read_bytes()).hexdigest()
+            fname = _c(path.name, _CYAN) + " " * (lw - len(path.name))
+            tag_s = f"{tag:>3}" if tag else "   "
+            print(f"    {fname}  {tag_s}  {sz:>12,} bytes  {sha}")
+        if verbose:
+            residents = scan_residents(rom)
+            _annotate_residents(residents)
+            _print_residents(model, residents, rom.name)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
-def parse_args(argv: list[str]) -> list[str]:
+_TARGETS_HELP = """\
+Available build targets:
+
+  Single model:
+    a600             A600  AmigaOS 3.2.3  (same as a600-3.2.3)
+    a1200            A1200 AmigaOS 3.2.3  (same as a1200-3.2.3)
+    a600-3.2.3       A600  AmigaOS 3.2.3
+    a1200-3.2.3      A1200 AmigaOS 3.2.3
+    a600-3.1         A600  AmigaOS 3.1
+    a1200-3.1        A1200 AmigaOS 3.1
+    a600-2.05        A600  AmigaOS 2.05
+    a500plus-2.04    A500+ AmigaOS 2.04
+
+  OS family (builds all models for that OS):
+    2.04             A500plus-2.04
+    2.05             A600-2.05
+    2.0x             A600-2.05 + A500plus-2.04
+    3.1              A600-3.1  + A1200-3.1
+    3.2 / 3.2.3      A600-3.2.3 + A1200-3.2.3
+    both             A600-3.2.3 + A1200-3.2.3
+
+  All:
+    all              every variant; default when no target is given
+"""
+
+_CONFIG_HELP = """\
+kickstart.yaml schema reference:
+
+  models:
+    Dict keyed by model name.  Required fields per entry:
+      os              AmigaOS version string, e.g. "3.2.3"
+      cpu             "68000" or "68020"
+      sourcerom_crc   CRC of the Capitoline source ROM
+      adf_crc         CRC of the modules ADF
+      saveprofile     Capitoline saveprofile directive (empty string = none)
+      template        Jinja2 template filename under templates/
+      amigaos_dir     Path to the AmigaOS installation (must contain ROMs/ and ADFs/)
+
+  modules:
+    Ordered list of entries added on top of the stock ROM.  Each entry uses
+    exactly one verb; `rom:` is mandatory on every verb except `skip:`.
+
+    Verbs:
+      {adf_modules: <inner-path>, rom: "E0"|"F8"}
+          Add a single library from the model's own modules ADF.
+
+      {adf: <adf-path>, adf_path: <inner-path>, rom: "E0"|"F8"}
+          Add a library from a specific ADF file (absolute path).
+          Consecutive rows sharing the same ADF are collapsed into one loadadf.
+
+      {file: <path>, rom: "E0"|"F8"}
+          Copy a file from disk into the ROM bank (added by its basename).
+
+      {replace: <stock-name>, with: <file-path>, rom: "F8"|"E0"}
+          Swap a stock F8 module with a file.  rom:"F8" replaces in-place;
+          rom:"E0" suppresses the F8 slot and lands the replacement in E0.
+
+      {replace: <stock-name>, adf: <adf-path>, adf_path: <inner>, rom: "F8"|"E0"}
+          Same as above but the replacement comes from inside an ADF.
+
+      {skip: <stock-name>}
+          Drop a stock F8 module entirely.  No `rom:` field allowed.
+
+      {relocate: <stock-name>, rom: "E0"}
+          Move a stock F8 module to E0, keeping its original binary.
+
+    Optional per-entry filters (rows are skipped when they do not match):
+      cpu: "68000"|"68020"
+      os:  "3.1"|"3.2.3"|"2.05"
+
+    Row order = order of `add` directives emitted into the Capitoline script.
+
+  Note: adf_path values are case-sensitive (Capitoline does an exact-case
+  lookup inside the ADF).  A mismatch causes the build to fail hard.
+"""
+
+
+class _PrintAndExit(argparse.Action):
+    """argparse action: print a text block and exit."""
+    def __init__(self, option_strings, dest, text="", **kw):
+        super().__init__(option_strings, dest, nargs=0, **kw)
+        self._text = text
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(self._text, end="")
+        parser.exit()
+
+
+def parse_args(argv: list[str]) -> tuple[list[str], bool, str]:
     parser = argparse.ArgumentParser(
         prog="kickstart.py",
         description=(
-            "CFD Kickstart ROM builder for Amiga 600 / 1200 (AmigaOS 2.05, 3.1, 3.2.3). "
-            "Produces 1 MB ROMs that include compactflash.device + ptable.library."
+            "Kickstart ROM builder for Amiga 600 / 1200. "
+            "Produces 1 MB ROMs with extra modules embedded via Capitoline."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            "Targets:\n"
-            "  a600 / a1200                 AmigaOS 3.2.3\n"
-            "  a600-3.2.3 / a1200-3.2.3     same as above (explicit)\n"
-            "  a600-3.1   / a1200-3.1       AmigaOS 3.1\n"
-            "  a600-2.05                    AmigaOS 2.05 (A600)\n"
-            "  a500plus-2.04                AmigaOS 2.04 (A500+)\n"
-            "  2.04 / 2.05 / 2.0x / 3.1 / 3.2 / 3.2.3   all ROMs for one OS\n"
-            "  all                          every variant (default)\n"
-            "\n"
-            "kickstart.yaml schema (YAML 1.2; `# ...` comments supported):\n"
-            "  models:    dict keyed by model name. Fields per entry:\n"
-            "                 os, cpu, sourcerom_crc, adf_crc, saveprofile,\n"
-            "                 template, amigaos_dir.\n"
-            "  modules:   ordered list of entries. Each entry uses one verb (`rom:` is\n"
-            "             mandatory per row except on `skip:`):\n"
-            "               {adf_modules: <inner>, rom: \"E0\"|\"F8\"}                     : lib from model's modules ADF\n"
-            "               {adf: <path>, adf_path: <inner>, rom: \"E0\"|\"F8\"}           : lib from a specific ADF file\n"
-            "               {file: <path>, rom: \"E0\"|\"F8\"}                             : file from disk; added by basename\n"
-            "               {replace: <stock>, with|adf+adf_path: ..., rom: \"F8\"|\"E0\"} : swap stock module (F8 slot or relocate to E0)\n"
-            "               {skip: <stock>}                                            : drop a stock F8 module (no `rom:`)\n"
-            "               {relocate: <stock>, rom: \"E0\"}                             : move a stock F8 module to E0\n"
-            "             Optional per-entry filters: cpu: \"68000\"|\"68020\", os: \"3.1\"|\"3.2.3\".\n"
-            "             Order in the list = order of `add` directives in the Capitoline script.\n"
-            "             See docs/kickstart.md for the full verbs reference.\n"
-        ),
     )
     parser.add_argument(
         "--version",
@@ -450,10 +738,33 @@ def parse_args(argv: list[str]) -> list[str]:
         version=f"%(prog)s {__version__}",
     )
     parser.add_argument(
+        "--list-targets",
+        action=_PrintAndExit,
+        text=_TARGETS_HELP,
+        help="list available build targets and exit",
+    )
+    parser.add_argument(
+        "--list-config",
+        action=_PrintAndExit,
+        text=_CONFIG_HELP,
+        help="show kickstart.yaml schema reference and exit",
+    )
+    parser.add_argument(
         "target",
         nargs="?",
         default="all",
         help="which ROM(s) to build (default: all, every variant)",
+    )
+    parser.add_argument(
+        "-q", "--quiet",
+        action="store_true",
+        help="suppress the resident table printed after each build",
+    )
+    parser.add_argument(
+        "-n", "--name",
+        default="cfd",
+        metavar="NAME",
+        help="basename for output files (default: cfd -> cfd.rom, cfd.F8, cfd.E0, ...)",
     )
     aliases = {
         "a600":            ["A600-3.2.3"],
@@ -483,18 +794,17 @@ def parse_args(argv: list[str]) -> list[str]:
             f"a600-3.2.3 | a1200-3.2.3 | a600-3.1 | a1200-3.1 | "
             f"a600-2.05 | a500plus-2.04 | 2.04 | 2.05 | 3.1 | 3.2.3 | all"
         )
-    return aliases[target]
+    return aliases[target], not args.quiet, args.name
 
 
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
-    models = parse_args(argv)
+    models, verbose, name = parse_args(argv)
     preflight(models)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for m in models:
-        build_one(m)
-    info("Done.")
+        build_one(m, verbose=verbose, name=name)
     return 0
 
 

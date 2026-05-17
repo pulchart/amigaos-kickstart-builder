@@ -8,49 +8,79 @@ Originally written to bake `compactflash.device` + `ptable.library` ([cfd projec
 
 The builder runs on Linux and shells out to [Capitoline](http://capitoline.twocatsblack.com/index.php/capcli/).
 
-| # | Prerequisite | Install at | Needed for |
+| # | Prerequisite | Install at | Config profiles |
 |---|---|---|---|
-| 1 | Python 3.10+ with `jinja2` + `pyyaml` | system packages | all builds |
-| 2 | Capitoline (`capcli.Linux`, `Components/`, `Capitoline Hashes/`) | `/opt/Capitoline/` | all builds |
-| 3 | Hyperion AmigaOS 3.2.3 Update (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/Update3.2.3/` | 3.2.3 builds |
-| 4 | Workbench 3.2 ADF (`workbench3.2.adf`) | `/opt/AmigaOS/AmigaOS3.2/adf/` | 3.2.3 builds |
-| 5 | AmigaOS 3.1 (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/AmigaOS3.1/` | 3.1 builds |
-| 6 | AmigaOS 2.05 ROM (v37.350, CRC `0x43b0df7b`) | `/opt/AmigaOS/AmigaOS2.05/ROMs/` | 2.05 build (A600) |
-| 7 | AmigaOS 2.04 ROM (v37.175 A500+, CRC `0xc3bdb240`) | `/opt/AmigaOS/AmigaOS2.04/ROMs/` | 2.04 build (A500+) |
-| 8 | pfs3aio | `/opt/AmigaOS/pfs/v20,0/` | all builds |
-| 9 | fat95 (68000 + 68020) | `/opt/AmigaOS/fat95/3.22/{68000,68020}/` | all builds |
-| 10 | cfd `compactflash.device` + `ptable.library` | `/opt/AmigaOS/cfd/1.42/full/{68000,68020}/{devs,libs}/` | all builds that embed cfd (currently 3.2.3 / 3.1 / 2.05; A500plus-2.04 has neither PCMCIA nor IDE and omits both) |
+| 1 | Python 3.10+ with `jinja2` + `pyyaml` | system packages | all configs |
+| 2 | [Capitoline](http://capitoline.twocatsblack.com/) (`capcli.Linux`, `Components/`, `Capitoline Hashes/`) | `/opt/Capitoline/` | all configs |
+| 3 | Hyperion AmigaOS 3.2.3 Update (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/Update3.2.3/` | any 3.2.3 target |
+| 4 | Workbench 3.2 ADF (`workbench3.2.adf`) | `/opt/AmigaOS/AmigaOS3.2/adf/` | `cfd.yaml`, `bare.yaml`, `iconlib.yaml` (rexxsyslib.library for 3.2.3) |
+| 5 | AmigaOS 3.1 (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/AmigaOS3.1/` | any 3.1 target |
+| 6 | AmigaOS 2.05 ROM (v37.350, CRC `0x43b0df7b`) | `/opt/AmigaOS/AmigaOS2.05/ROMs/` | any 2.05 target |
+| 7 | AmigaOS 2.04 ROM (v37.175 A500+, CRC `0xc3bdb240`) | `/opt/AmigaOS/AmigaOS2.04/ROMs/` | any 2.04 target |
+| 8 | [pfs3aio](https://github.com/tonioni/pfs3aio) v20.0 test5 from [EAB  PFS3aio v3.2 test](https://eab.abime.net/showthread.php?t=115072) | `/opt/AmigaOS/pfs/v20,0/` | `cfd.yaml`, `iconlib.yaml` |
+| 9 | [fat95](https://github.com/pulchart/fat95/releases) (68000 + 68020) | `/opt/AmigaOS/fat95/3.22/{68000,68020}/` | `cfd.yaml` only |
+| 10 | [cfd](https://github.com/pulchart/cfd/releases) `compactflash.device` + `ptable.library` | `/opt/AmigaOS/cfd/1.42/full/{68000,68020}/{devs,libs}/` | `cfd.yaml` only (3.2.3 / 3.1 / 2.05; A500plus-2.04 omitted, no PCMCIA or IDE) |
+| 11 | [IconLib 46.4](https://aminet.net/package/util/libs/IconLib_46.4) (`icon.library` 68000 + 68020) | `/opt/AmigaOS/IconLib/46.4.602/Libs/{,68000/}icon.library` | `iconlib.yaml` only |
 
 If a required prerequisite for a target you're building is missing, the script reports an error and stops. Targets you don't build don't need their source trees. Capitoline / ROMs / ADFs are user-supplied (none are bundled here).
 
 For the technical details behind the scantable patches, see [docs/kickstart-scantable.md](docs/kickstart-scantable.md).
 
-## Build
+## Usage
 
 ```sh
-python3 kickstart.py             # default: every variant (3.2.3 + 3.1 + 2.05 + 2.04)
-python3 kickstart.py 3.2.3       # both 3.2.3 ROMs
-python3 kickstart.py 3.1         # both 3.1 ROMs
-python3 kickstart.py 2.0x        # both 2.0x ROMs (A600-2.05 + A500plus-2.04)
-python3 kickstart.py 2.05        # A600-2.05 ROM only
-python3 kickstart.py 2.04        # A500plus-2.04 ROM only
-python3 kickstart.py a1200-3.1   # one specific model
+python3 kickstart.py                    # all non-underscore configs in config/, every variant
+python3 kickstart.py -c config/cfd.yaml # same, explicit config selection
+python3 kickstart.py 3.2.3              # both 3.2.3 ROMs
+python3 kickstart.py 3.1                # both 3.1 ROMs
+python3 kickstart.py 2.0x               # both 2.0x ROMs (A600-2.05 + A500plus-2.04)
+python3 kickstart.py 2.05               # A600-2.05 ROM only
+python3 kickstart.py 2.04               # A500plus-2.04 ROM only
+python3 kickstart.py a1200-3.1          # one specific model
+
+# select a different config profile (see Config profiles below)
+python3 kickstart.py -c config/bare.yaml 3.2.3
+python3 kickstart.py -c config/iconlib.yaml a600
+
+# override the output basename
+python3 kickstart.py -c config/bare.yaml -n myrom a600
 ```
 
-Output lands in `out/<MODEL>/` where `<MODEL>` is one of `A600-3.2.3`, `A1200-3.2.3`, `A600-3.1`, `A1200-3.1`, `A600-2.05`, `A500plus-2.04`:
+Output lands in `out/<name>/<MODEL>/` where `<name>` is the config stem (or `-n` override) and `<MODEL>` is one of `A600-3.2.3`, `A1200-3.2.3`, `A600-3.1`, `A1200-3.1`, `A600-2.05`, `A500plus-2.04`:
 
 | File | Description |
 |---|---|
-| `cfd.rom` | 1 MB merged image (F8 ROM concatenated with E0 ROM) |
-| `cfd.F8` | F8 half (512 KB at `0xF80000`): base AmigaOS modules |
-| `cfd.E0` | E0 half (512 KB at `0xE00000`): extra modules (rexxsyslib, pfs3aio, fat95, compactflash.device, ...) |
-| `cfd.hi.bin`, `cfd.lo.bin` | (A1200 only) byteswapped halves for the A1200's two physical Kickstart chips |
+| `<name>.rom` | 1 MB merged image (F8 ROM concatenated with E0 ROM) |
+| `<name>.F8` | F8 half (512 KB at `0xF80000`): base AmigaOS modules |
+| `<name>.E0` | E0 half (512 KB at `0xE00000`): extra modules (rexxsyslib, pfs3aio, fat95, compactflash.device, ...) |
+| `<name>.hi.bin`, `<name>.lo.bin` | (A1200 only) byteswapped halves for the A1200's two physical Kickstart chips |
 | `capitoline.log` | full Capitoline build log |
 | `capitoline.script` | rendered script that was fed to `capcli.Linux` |
 
+## Config profiles
+
+Three profiles are bundled under `config/`. All share the same hardware model definitions (`config/_models.yaml`); only the `modules:` list differs.
+
+| Profile | Command | What it adds to E0 (and F8) |
+|---|---|---|
+| `cfd.yaml` | `python3 kickstart.py` | workbench.library, icon.library, rexxsyslib, pfs3aio, fat95, **compactflash.device + ptable.library** (cfd; 3.2.3 / 3.1 / 2.05 only) |
+| `bare.yaml` | `python3 kickstart.py -c config/bare.yaml` | AmigaOS's native rom extension: workbench.library, icon.library (stock), rexxsyslib |
+| `iconlib.yaml` | `python3 kickstart.py -c config/iconlib.yaml` | workbench.library, **icon.library 46.4.602** (replaces stock), rexxsyslib, pfs3aio |
+
+To create your own profile, copy any existing config file, adjust the `modules:` list, and pass it with `-c`:
+
+```sh
+cp config/bare.yaml config/myprofile.yaml
+# edit config/myprofile.yaml
+python3 kickstart.py -c config/myprofile.yaml 3.2.3
+# output: out/myprofile/A600-3.2.3/myprofile.rom, out/myprofile/A1200-3.2.3/myprofile.rom
+```
+
+The `models_from: _models.yaml` line at the top of every config pulls in the shared hardware model definitions automatically.
+
 ## Customising the build
 
-The set of extra modules and the per-machine config live in `config/kickstart.yaml`. Run `python3 kickstart.py --help` for the full schema. Each entry in the `modules:` list uses one of these verbs:
+The set of extra modules and the per-machine config live in `config/cfd.yaml` (the default). Run `python3 kickstart.py --help` for usage and `python3 kickstart.py --help-config` for the full schema. Each entry in the `modules:` list uses one of these verbs:
 
 | Verb (full signature) | Effect | Notes |
 |---|---|---|

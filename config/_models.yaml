@@ -1,0 +1,60 @@
+models:
+
+  A600-3.2.3:
+    os:            "3.2.3"
+    cpu:           "68000"
+    sourcerom_crc: "0xe1f50b0b"     # CDTVA500A600A2000.47.115.rom
+    adf_crc:       "0xb6dfa531"     # ModulesA600_3.2.3.adf
+    saveprofile:   ""               # A600 has one 16-bit Kickstart; just flash cfd.rom
+    template:      "capitoline.script.3.2.3.j2"
+    amigaos_dir:   "/opt/AmigaOS/Update3.2.3"
+
+  A1200-3.2.3:
+    os:            "3.2.3"
+    cpu:           "68020"
+    sourcerom_crc: "0xb18d3b67"     # A1200.47.115.rom
+    adf_crc:       "0x920f6115"     # ModulesA1200_3.2.3.adf
+    # A1200 has two physical Kickstart chips, byteswapped halves, for dual-chip EPROM flashing
+    saveprofile: |-
+      romprofile dual 0 1
+      saveprofile 512 byteswap ./cfd
+    template:      "capitoline.script.3.2.3.j2"
+    amigaos_dir:   "/opt/AmigaOS/Update3.2.3"
+
+  A600-3.1:
+    os:            "3.1"
+    cpu:           "68000"
+    sourcerom_crc: "0xfc24ae0d"     # kick40063.A600
+    adf_crc:       ""               # 3.1 has no Modules ADF
+    saveprofile:   ""
+    template:      "capitoline.script.3.1.j2"
+    amigaos_dir:   "/opt/AmigaOS/AmigaOS3.1"
+
+  A1200-3.1:
+    os:            "3.1"
+    cpu:           "68020"
+    sourcerom_crc: "0x1483a091"     # kick40068.A1200
+    adf_crc:       ""               # 3.1 has no Modules ADF
+    saveprofile: |-
+      romprofile dual 0 1
+      saveprofile 512 byteswap ./cfd
+    template:      "capitoline.script.3.1.j2"
+    amigaos_dir:   "/opt/AmigaOS/AmigaOS3.1"
+
+  A600-2.05:
+    os:            "2.05"
+    cpu:           "68000"
+    sourcerom_crc: "0x43b0df7b"     # rev 37.350 (A600HD)
+    adf_crc:       ""               # 2.0x has no Modules ADF
+    saveprofile:   ""
+    template:      "capitoline.script.2.0x.j2"
+    amigaos_dir:   "/opt/AmigaOS/AmigaOS2.05"
+
+  A500plus-2.04:
+    os:            "2.04"
+    cpu:           "68000"
+    sourcerom_crc: "0xc3bdb240"     # rev 37.175 (A500+)
+    adf_crc:       ""               # 2.0x has no Modules ADF
+    saveprofile:   ""
+    template:      "capitoline.script.2.0x.j2"
+    amigaos_dir:   "/opt/AmigaOS/AmigaOS2.04"

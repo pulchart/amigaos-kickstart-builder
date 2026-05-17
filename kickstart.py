@@ -60,7 +60,7 @@ _YELLOW = "\033[33m"
 _BLUE   = "\033[94m"
 _RED    = "\033[31m"
 
-__version__ = "1.2"
+__version__ = "1.3"
 __author__ = "Jaroslav Pulchart"
 __license__ = "MIT"
 
@@ -72,7 +72,7 @@ CAPCLI = CAPITOLINE_DIR / "capcli.Linux"
 
 CONFIG_DIR = SCRIPT_DIR / "config"
 TEMPLATES_DIR = SCRIPT_DIR / "templates"
-KICKSTART_YAML = CONFIG_DIR / "kickstart.yaml"
+KICKSTART_YAML = CONFIG_DIR / "cfd.yaml"
 OUT_DIR = SCRIPT_DIR / "out"
 
 VALID_ROMS = ("E0", "F8")
@@ -100,20 +100,33 @@ class SourceRomEntry:
     kind: str = "from_source_rom"
 
 
-def _load_config() -> dict:
-    """Load kickstart.yaml once at module init.
+def _load_config(path: Path) -> dict:
+    """Load a kickstart YAML config file.
 
     Convert YAML strings to native Python types where useful (amigaos_dir
     becomes a Path).  Everything else stays as-is and is consumed downstream.
     """
-    cfg = yaml.safe_load(KICKSTART_YAML.read_text())
+    cfg = yaml.safe_load(path.read_text())
+    if "models_from" in cfg:
+        models_path = (path.parent / cfg["models_from"]).resolve()
+        if not models_path.is_file():
+            sys.exit(f"ERROR: models_from: '{cfg['models_from']}' not found: {models_path}")
+        cfg["models"] = yaml.safe_load(models_path.read_text())["models"]
+    cfg.setdefault("modules", [])
     for m in cfg["models"].values():
         m["amigaos_dir"] = Path(m["amigaos_dir"])
     return cfg
 
 
-CONFIG = _load_config()
-MODELS = CONFIG["models"]
+class _Cfg:
+    """Holds the active build configuration; mutated by main() when -c is used."""
+    def __init__(self, yaml_path: Path) -> None:
+        self.yaml_path = yaml_path
+        self.config = _load_config(yaml_path)
+        self.models = self.config["models"]
+
+
+_cfg = _Cfg(KICKSTART_YAML)
 
 
 def info(msg: str) -> None:
@@ -130,10 +143,10 @@ def preflight(models: list[str]) -> None:
         die(f"Missing {CAPCLI}")
     if not (CAPITOLINE_DIR / "Components").is_dir():
         die(f"Missing {CAPITOLINE_DIR / 'Components'}")
-    if not KICKSTART_YAML.is_file():
-        die(f"Missing {KICKSTART_YAML}")
+    if not _cfg.yaml_path.is_file():
+        die(f"Missing {_cfg.yaml_path}")
     for m in models:
-        cfg = MODELS[m]
+        cfg = _cfg.models[m]
         amiga = cfg["amigaos_dir"]
         if not (amiga / "ROMs").is_dir():
             die(f"Missing {amiga / 'ROMs'} (for {m})")
@@ -160,7 +173,7 @@ def _need_rom(r: dict, allowed: tuple = VALID_ROMS) -> str:
 def _ensure_unique_target(target: str, patched: dict) -> None:
     """Reject two rows that touch the same stock module."""
     if target in patched:
-        die(f"Two rows target stock module '{target}' in {KICKSTART_YAML.name}")
+        die(f"Two rows target stock module '{target}' in {_cfg.yaml_path.name}")
 
 
 def _link_adf(adf_path: Path, workdir: Path) -> Path:
@@ -464,7 +477,7 @@ def resolve_extra_modules(
     by_rom: dict[str, list] = defaultdict(list)
     patched: dict[str, str] = {}
 
-    for r in CONFIG["modules"]:
+    for r in _cfg.config["modules"]:
         if r.get("cpu") and r["cpu"] != cpu:
             continue
         if r.get("os") and r["os"] != os_:
@@ -588,13 +601,19 @@ def _bank_free(data: bytes) -> int:
 
 
 def build_one(model: str, verbose: bool = True, name: str = "cfd") -> None:
-    cfg = MODELS[model]
+    cfg = _cfg.models[model]
     cpu = cfg["cpu"]
     os_ = cfg["os"]
     amiga = cfg["amigaos_dir"]
 
     print()
-    print(_c(f"  Building {model} ROM  (OS {os_}, CPU {cpu})", _BOLD, _CYAN))
+    print(
+        _c("  Building ", _BOLD, _CYAN)
+        + _c(name, _BOLD, _YELLOW)
+        + _c(" / ", _BOLD, _CYAN)
+        + _c(model, _BOLD, _CYAN)
+        + _c(f" ROM  (OS {os_}, CPU {cpu})", _BOLD, _CYAN)
+    )
 
     workdir = SCRIPT_DIR / f"workdir_{model}"
     if workdir.exists():
@@ -620,7 +639,7 @@ def build_one(model: str, verbose: bool = True, name: str = "cfd") -> None:
             _dump_log_tail(log)
             die(f"Missing {e0}")
 
-        model_out = OUT_DIR / model
+        model_out = OUT_DIR / name / model
         if model_out.exists():
             shutil.rmtree(model_out)
         model_out.mkdir(parents=True)
@@ -757,6 +776,13 @@ kickstart.yaml schema reference:
 
   Note: adf_path values are case-sensitive (Capitoline does an exact-case
   lookup inside the ADF).  A mismatch causes the build to fail hard.
+
+models / models_from:
+  The config file must contain either an inline ``models:`` dict or a
+  ``models_from: <relative-path>`` key that points to a separate YAML file
+  (resolved relative to the config file's own directory) containing the
+  ``models:`` dict.  The latter lets multiple config files share one
+  common model definitions file without duplication.
 """
 
 
@@ -771,7 +797,7 @@ class _PrintAndExit(argparse.Action):
         parser.exit()
 
 
-def parse_args(argv: list[str]) -> tuple[list[str], bool, str]:
+def parse_args(argv: list[str]) -> tuple[list[str], bool, str | None, Path | None, bool]:
     parser = argparse.ArgumentParser(
         prog="kickstart.py",
         description=(
@@ -792,10 +818,15 @@ def parse_args(argv: list[str]) -> tuple[list[str], bool, str]:
         help="list available build targets and exit",
     )
     parser.add_argument(
-        "--list-config",
+        "--list-configs",
+        action="store_true",
+        help="list available config profiles in config/ and exit",
+    )
+    parser.add_argument(
+        "--help-config",
         action=_PrintAndExit,
         text=_CONFIG_HELP,
-        help="show kickstart.yaml schema reference and exit",
+        help="show config file schema reference and exit",
     )
     parser.add_argument(
         "target",
@@ -809,10 +840,16 @@ def parse_args(argv: list[str]) -> tuple[list[str], bool, str]:
         help="suppress the resident table printed after each build",
     )
     parser.add_argument(
+        "-c", "--config",
+        default=None,
+        metavar="FILE",
+        help="config file to use; if omitted every non-underscore YAML in config/ is built in sequence",
+    )
+    parser.add_argument(
         "-n", "--name",
-        default="cfd",
+        default=None,
         metavar="NAME",
-        help="basename for output files (default: cfd -> cfd.rom, cfd.F8, cfd.E0, ...)",
+        help="basename for output files (default: stem of config filename); requires -c",
     )
     aliases = {
         "a600":            ["A600-3.2.3"],
@@ -842,17 +879,42 @@ def parse_args(argv: list[str]) -> tuple[list[str], bool, str]:
             f"a600-3.2.3 | a1200-3.2.3 | a600-3.1 | a1200-3.1 | "
             f"a600-2.05 | a500plus-2.04 | 2.04 | 2.05 | 3.1 | 3.2.3 | all"
         )
-    return aliases[target], not args.quiet, args.name
+    config_path = Path(args.config).resolve() if args.config else None
+    return aliases[target], not args.quiet, args.name, config_path, args.list_configs
+
+
+def _discover_configs() -> list[Path]:
+    """Return sorted list of non-underscore YAML files in config/."""
+    return sorted(
+        p for p in CONFIG_DIR.glob("*.yaml")
+        if not p.name.startswith("_")
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
-    models, verbose, name = parse_args(argv)
-    preflight(models)
+    models, verbose, name_arg, config_path, list_configs = parse_args(argv)
+    if list_configs:
+        for p in _discover_configs():
+            print(p.name)
+        return 0
+    if name_arg is not None and config_path is None:
+        die("-n / --name requires -c (ambiguous across multiple configs)")
+    config_paths = [config_path] if config_path is not None else _discover_configs()
+    if not config_paths:
+        die(f"No config files found in {CONFIG_DIR}")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for m in models:
-        build_one(m, verbose=verbose, name=name)
+    for cp in config_paths:
+        if not cp.is_file():
+            die(f"Config file not found: {cp}")
+        _cfg.yaml_path = cp
+        _cfg.config = _load_config(cp)
+        _cfg.models = _cfg.config["models"]
+        name = name_arg if name_arg is not None else cp.stem
+        preflight(models)
+        for m in models:
+            build_one(m, verbose=verbose, name=name)
     return 0
 
 

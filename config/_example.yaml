@@ -1,0 +1,65 @@
+# Example / template config for kickstart.py.
+# Copy this file, rename it (without the leading _), and pass it with -c.
+# Run `python3 kickstart.py --help-config` for the full schema reference.
+#
+# NOTE: `adf_path:` values are case-sensitive, capcli does an exact-case
+# lookup against ADF entries. A mismatch fails the build hard rather than
+# silently dropping the module.
+
+models_from: _models.yaml
+
+modules:
+
+  # ---------------------------------------------------------------------------
+  # replace: swap a stock F8 module with a different binary
+  # ---------------------------------------------------------------------------
+
+  # Hyperion v47.4 card.resource from the 3.2.3 Modules ADFs.
+  # rom: "F8" -> substitute at the stock F8 slot.
+  #- {replace: "card.resource", adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA600_3.2.3.adf",  adf_path: "LIBS/Resources/card.resource", os: "3.1", cpu: "68000", rom: "F8"}
+  #- {replace: "card.resource", adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA1200_3.2.3.adf", adf_path: "LIBS/Resources/card.resource", os: "3.1", cpu: "68020", rom: "F8"}
+
+  # Hyperion v47.4 scsi.device doesn't fit in 3.1's tight F8 budget;
+  # rom: "E0" suppresses the F8 slot and lands the replacement in E0 instead.
+  #- {replace: "scsi.device", adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA600_3.2.3.adf",  adf_path: "DEVS/A600/scsi.device",  os: "3.1", cpu: "68000", rom: "E0"}
+  #- {replace: "scsi.device", adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA1200_3.2.3.adf", adf_path: "DEVS/A1200/scsi.device", os: "3.1", cpu: "68020", rom: "E0"}
+
+  # Furia 8 MB PCMCIA card.resource (community alternative to the Hyperion one above).
+  #- {replace: "card.resource", with: "Capitoline Hashes/PCMCIA/cardres.ld.strip", os: "3.1", rom: "F8"}
+
+  # ---------------------------------------------------------------------------
+  # skip: drop a stock F8 module entirely (no rom: allowed)
+  # ---------------------------------------------------------------------------
+
+  # carddisk.device is the stock PCMCIA SRAM-card handler; omit it if
+  # compactflash.device replaces its role and you need the F8 space.
+  #- {skip: "carddisk.device", os: "3.1"}
+
+  # ---------------------------------------------------------------------------
+  # relocate: move a stock F8 module to E0, keeping its original binary
+  # ---------------------------------------------------------------------------
+
+  # Keep carddisk.device available but free up its F8 slot.
+  #- {relocate: "carddisk.device", os: "3.1", rom: "E0"}
+
+  # ---------------------------------------------------------------------------
+  # adf_modules: add a library from the model's own modules ADF (3.2.3 only)
+  # ---------------------------------------------------------------------------
+
+  #- {adf_modules: "LIBS/workbench.library", os: "3.2.3", rom: "E0"}
+  #- {adf_modules: "LIBS/icon.library",      os: "3.2.3", rom: "E0"}
+
+  # ---------------------------------------------------------------------------
+  # adf: add a library from a specific ADF file
+  # ---------------------------------------------------------------------------
+
+  #- {adf: "/opt/AmigaOS/AmigaOS3.2/adf/workbench3.2.adf", adf_path: "Libs/rexxsyslib.library", os: "3.2.3", rom: "E0"}
+  #- {adf: "/opt/AmigaOS/AmigaOS3.1/ADFs/wbench31.adf",    adf_path: "Libs/rexxsyslib.library", os: "3.1",   rom: "E0"}
+
+  # ---------------------------------------------------------------------------
+  # file: add a binary file from disk (absolute or repo-relative path)
+  # ---------------------------------------------------------------------------
+
+  #- {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio",                 rom: "E0"}
+  #- {file: "/opt/AmigaOS/fat95/3.22/68000/fat95", cpu: "68000", rom: "E0"}
+  #- {file: "/opt/AmigaOS/fat95/3.22/68020/fat95", cpu: "68020", rom: "E0"}

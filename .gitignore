@@ -2,3 +2,4 @@ out/
 workdir_*/
 __pycache__/
 *.sh
+*.bin

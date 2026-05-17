@@ -100,10 +100,30 @@ Order in the `modules:` list = order of `add` directives in the rendered Capitol
 
 ## Flashing
 
-- **A1200**: two physical Kickstart chips. Flash `cfd.hi.bin` to the upper chip and `cfd.lo.bin` to the lower chip; the dual-EPROM word layout is already byteswapped for you.
-- **A600 / A500+**: single 16-bit Kickstart ROM. Flash the merged 1 MB image `cfd.rom` to a 1 MB Kickstart adapter chip.
+Output filenames use `<name>` (the config stem, or `-n` override).
 
-Use whatever EPROM / flash programmer you normally use; the builder produces standard binary images with no further wrapping.
+### A1200: dual-chip layout
+
+The A1200 Kickstart socket takes two 512 KB (4 Mbit) EPROMs wired in parallel (odd/even byte lanes). The builder produces ready-to-flash split images with the byteswap already applied:
+
+| File | Description |
+|---|---|
+| `<name>.hi.bin` | upper chip (odd bytes) for 27C400 (4 Mbit, DIP42) |
+| `<name>.lo.bin` | lower chip (even bytes) for 27C400 (4 Mbit, DIP42) |
+| `<name>.F8` | F8 bank (512 KB, `0xF80000`) for FS-UAE |
+| `<name>.E0` | E0 bank (512 KB, `0xE00000`) for FS-UAE |
+
+### A600 / A500+: single-chip layout
+
+| File | Description |
+|---|---|
+| `<name>.rom` | 1 MB merged image (F8 + E0 concatenated) for 27C800 (8Mbit, DIP42) |
+| `<name>.F8` | F8 bank (512 KB, `0xF80000`) for FS-UAE |
+| `<name>.E0` | E0 bank (512 KB, `0xE00000`) for FS-UAE |
+
+### Programmer
+
+The **T48 (MiniPro)** handles 27C400 and 27C800 directly; the **TL866II Plus** (MiniPro) works via a conversion adapter.
 
 ## Deeper docs
 

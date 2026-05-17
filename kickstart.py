@@ -60,7 +60,7 @@ _YELLOW = "\033[33m"
 _BLUE   = "\033[94m"
 _RED    = "\033[31m"
 
-__version__ = "1.3"
+__version__ = "1.4"
 __author__ = "Jaroslav Pulchart"
 __license__ = "MIT"
 
@@ -812,13 +812,13 @@ def parse_args(argv: list[str]) -> tuple[list[str], bool, str | None, Path | Non
         version=f"%(prog)s {__version__}",
     )
     parser.add_argument(
-        "--list-targets",
+        "-t","--list-targets",
         action=_PrintAndExit,
         text=_TARGETS_HELP,
         help="list available build targets and exit",
     )
     parser.add_argument(
-        "--list-configs",
+        "-l", "--list-configs",
         action="store_true",
         help="list available config profiles in config/ and exit",
     )
@@ -835,21 +835,21 @@ def parse_args(argv: list[str]) -> tuple[list[str], bool, str | None, Path | Non
         help="which ROM(s) to build (default: all, every variant)",
     )
     parser.add_argument(
-        "-q", "--quiet",
-        action="store_true",
-        help="suppress the resident table printed after each build",
-    )
-    parser.add_argument(
         "-c", "--config",
         default=None,
         metavar="FILE",
-        help="config file to use; if omitted every non-underscore YAML in config/ is built in sequence",
+        help="config file to use: path, or a shortname like 'iconlib' that resolves to config/iconlib.yaml; if omitted every non-underscore YAML in config/ is built in sequence",
     )
     parser.add_argument(
         "-n", "--name",
         default=None,
         metavar="NAME",
         help="basename for output files (default: stem of config filename); requires -c",
+    )
+    parser.add_argument(
+        "-q", "--quiet",
+        action="store_true",
+        help="suppress the resident table printed after each build",
     )
     aliases = {
         "a600":            ["A600-3.2.3"],
@@ -879,7 +879,7 @@ def parse_args(argv: list[str]) -> tuple[list[str], bool, str | None, Path | Non
             f"a600-3.2.3 | a1200-3.2.3 | a600-3.1 | a1200-3.1 | "
             f"a600-2.05 | a500plus-2.04 | 2.04 | 2.05 | 3.1 | 3.2.3 | all"
         )
-    config_path = Path(args.config).resolve() if args.config else None
+    config_path = _resolve_config_arg(args.config) if args.config else None
     return aliases[target], not args.quiet, args.name, config_path, args.list_configs
 
 
@@ -891,13 +891,25 @@ def _discover_configs() -> list[Path]:
     )
 
 
+def _resolve_config_arg(arg: str) -> Path:
+    """Resolve -c/--config: existing path, or shortname under config/."""
+    direct = Path(arg)
+    if direct.is_file():
+        return direct.resolve()
+    if "/" not in arg and os.sep not in arg:
+        for candidate in (CONFIG_DIR / arg, CONFIG_DIR / f"{arg}.yaml"):
+            if candidate.is_file():
+                return candidate.resolve()
+    return direct.resolve()
+
+
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
     models, verbose, name_arg, config_path, list_configs = parse_args(argv)
     if list_configs:
         for p in _discover_configs():
-            print(p.name)
+            print(p.stem)
         return 0
     if name_arg is not None and config_path is None:
         die("-n / --name requires -c (ambiguous across multiple configs)")

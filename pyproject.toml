@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amigaos-kickstart-builder"
+version = "1.4"
+description = "YAML-driven 1 MB AmigaOS Kickstart ROM builder (3.2.3 / 3.1 / 2.0x) driving Capitoline."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Jaroslav Pulchart" }]
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml",
+    "jinja2",
+    "tabulate",
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: System :: Emulators",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "pre-commit",
+]
+
+[project.scripts]
+kickstart = "kickstart.cli:main"
+
+[tool.setuptools]
+packages = ["kickstart"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",  # line length is enforced by the formatter; ignore in lint
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

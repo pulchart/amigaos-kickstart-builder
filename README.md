@@ -10,7 +10,7 @@ The builder runs on Linux and shells out to [Capitoline](http://capitoline.twoca
 
 | # | Prerequisite | Install at | Config profiles |
 |---|---|---|---|
-| 1 | Python 3.10+ with `jinja2` + `pyyaml` | system packages | all configs |
+| 1 | Python 3.10+ with `jinja2`, `pyyaml`, `tabulate` | system packages | all configs |
 | 2 | [Capitoline](http://capitoline.twocatsblack.com/) (`capcli.Linux`, `Components/`, `Capitoline Hashes/`) | `/opt/Capitoline/` | all configs |
 | 3 | Hyperion AmigaOS 3.2.3 Update (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/Update3.2.3/` | any 3.2.3 target |
 | 4 | Workbench 3.2 ADF (`workbench3.2.adf`) | `/opt/AmigaOS/AmigaOS3.2/adf/` | `cfd.yaml`, `bare.yaml`, `iconlib.yaml` (rexxsyslib.library for 3.2.3) |
@@ -129,6 +129,7 @@ The **T48 (MiniPro)** handles 27C400 and 27C800 directly; the **TL866II Plus** (
 
 - [docs/kickstart-scantable.md](docs/kickstart-scantable.md): how the 1 MB scantable redirect works across 3.2.3 / 3.1 / 2.0x and why each family uses a different mechanism.
 - [docs/ROMS.md](docs/ROMS.md): resident-module inventory across source Kickstart ROM (2.0x / 3.0 / 3.1 / 3.2.y).
+
 
 ## Licensing and IP boundary
 

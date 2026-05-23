@@ -101,17 +101,14 @@ def _handle_replace(r: dict, workdir: Path, by_rom: dict, patched: dict, config_
 
 
 def _handle_adf(r: dict, workdir: Path, by_rom: dict, patched: dict, config_name: str) -> None:
-    """`adf:` + `adf_path:` (specific ADF) or `adf_modules:` (model `$ADF`).
+    """`adf:` + `adf_path:` add a lib from a specific ADF.
 
     Consecutive rows that share the same ADF reference collapse into a
     single `loadadf` followed by multiple `add ADF:/...` directives.
     """
     rom = _need_rom(r)
-    if "adf_modules" in r:
-        adf_ref, lib_path = "$ADF", r["adf_modules"]
-    else:
-        adf = _link_adf(Path(r["adf"]), workdir)
-        adf_ref, lib_path = adf.name, r["adf_path"]
+    adf = _link_adf(Path(r["adf"]), workdir)
+    adf_ref, lib_path = adf.name, r["adf_path"]
     bucket = by_rom[rom]
     if bucket and isinstance(bucket[-1], AdfGroup) and bucket[-1].adf_ref == adf_ref:
         bucket[-1].libs.append(lib_path)

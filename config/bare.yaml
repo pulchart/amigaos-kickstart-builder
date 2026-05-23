@@ -3,8 +3,10 @@ models_from: _models.yaml
 modules:
   # workbench.library + icon.library from the model's modules ADF (3.2.3 only;
   # 3.1 has them in F8 source ROM). ADF-sourced rows must use rom: "E0".
-  - {adf_modules: "LIBS/workbench.library", os: "3.2.3", rom: "E0"}
-  - {adf_modules: "LIBS/icon.library", os: "3.2.3", rom: "E0"}
+  - {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA600_3.2.3.adf",  adf_path: "LIBS/workbench.library", os: "3.2.3", cpu: "68000", rom: "E0"}
+  - {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA1200_3.2.3.adf", adf_path: "LIBS/workbench.library", os: "3.2.3", cpu: "68020", rom: "E0"}
+  - {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA600_3.2.3.adf",  adf_path: "LIBS/icon.library",      os: "3.2.3", cpu: "68000", rom: "E0"}
+  - {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA1200_3.2.3.adf", adf_path: "LIBS/icon.library",      os: "3.2.3", cpu: "68020", rom: "E0"}
 
   # rexxsyslib from a specific Workbench ADF, per OS.
   - {adf: "/opt/AmigaOS/AmigaOS3.2/adf/workbench3.2.adf", adf_path: "Libs/rexxsyslib.library", os: "3.2.3", rom: "E0"}

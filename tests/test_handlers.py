@@ -49,7 +49,10 @@ def test_handle_relocate_appends_source_rom_entry_to_e0():
     by_rom, patched = _fresh()
     _handle_relocate(
         {"relocate": "ramdrive.device", "rom": "E0"},
-        Path("/tmp"), by_rom, patched, "t.yaml",
+        Path("/tmp"),
+        by_rom,
+        patched,
+        "t.yaml",
     )
     assert patched["ramdrive.device"].startswith("# Relocated to E0:")
     assert isinstance(by_rom["E0"][0], SourceRomEntry)
@@ -59,9 +62,7 @@ def test_handle_relocate_appends_source_rom_entry_to_e0():
 def test_handle_relocate_rejects_f8_target():
     by_rom, patched = _fresh()
     with pytest.raises(SystemExit):
-        _handle_relocate(
-            {"relocate": "x", "rom": "F8"}, Path("/tmp"), by_rom, patched, "t.yaml"
-        )
+        _handle_relocate({"relocate": "x", "rom": "F8"}, Path("/tmp"), by_rom, patched, "t.yaml")
 
 
 # --- replace ----------------------------------------------------------------
@@ -71,7 +72,10 @@ def test_handle_replace_with_file_to_f8_emits_add_directive():
     by_rom, patched = _fresh()
     _handle_replace(
         {"replace": "exec.library", "with": "patched/exec.bin", "rom": "F8"},
-        Path("/tmp"), by_rom, patched, "t.yaml",
+        Path("/tmp"),
+        by_rom,
+        patched,
+        "t.yaml",
     )
     assert patched["exec.library"].startswith("# Patched: exec.library")
     assert 'add "patched/exec.bin"' in patched["exec.library"]
@@ -82,7 +86,10 @@ def test_handle_replace_with_file_to_e0_relocates():
     by_rom, patched = _fresh()
     _handle_replace(
         {"replace": "exec.library", "with": "x/y.bin", "rom": "E0"},
-        Path("/tmp"), by_rom, patched, "t.yaml",
+        Path("/tmp"),
+        by_rom,
+        patched,
+        "t.yaml",
     )
     assert patched["exec.library"].startswith("# Relocated to E0:")
     assert isinstance(by_rom["E0"][0], FileEntry)
@@ -102,7 +109,10 @@ def test_handle_replace_with_adf_to_f8_emits_loadadf_then_add(tmp_path):
             "adf_path": "LIBS/Resources/card.resource",
             "rom": "F8",
         },
-        workdir, by_rom, patched, "t.yaml",
+        workdir,
+        by_rom,
+        patched,
+        "t.yaml",
     )
     frag = patched["card.resource"]
     assert f'loadadf "{adf.name}"' in frag
@@ -117,7 +127,10 @@ def test_handle_replace_with_adf_to_e0_appends_adf_group(tmp_path):
     by_rom, patched = _fresh()
     _handle_replace(
         {"replace": "x", "adf": str(adf), "adf_path": "L/p", "rom": "E0"},
-        workdir, by_rom, patched, "t.yaml",
+        workdir,
+        by_rom,
+        patched,
+        "t.yaml",
     )
     grp = by_rom["E0"][0]
     assert isinstance(grp, AdfGroup)
@@ -128,9 +141,7 @@ def test_handle_replace_with_adf_to_e0_appends_adf_group(tmp_path):
 def test_handle_replace_without_with_or_adf_dies():
     by_rom, patched = _fresh()
     with pytest.raises(SystemExit):
-        _handle_replace(
-            {"replace": "x", "rom": "F8"}, Path("/tmp"), by_rom, patched, "t.yaml"
-        )
+        _handle_replace({"replace": "x", "rom": "F8"}, Path("/tmp"), by_rom, patched, "t.yaml")
 
 
 def test_handle_replace_rejects_duplicate_target():
@@ -139,11 +150,14 @@ def test_handle_replace_rejects_duplicate_target():
     with pytest.raises(SystemExit):
         _handle_replace(
             {"replace": "exec.library", "with": "x.bin", "rom": "F8"},
-            Path("/tmp"), by_rom, patched, "t.yaml",
+            Path("/tmp"),
+            by_rom,
+            patched,
+            "t.yaml",
         )
 
 
-# --- adf / adf_modules ------------------------------------------------------
+# --- adf --------------------------------------------------------------------
 
 
 def test_handle_adf_collapses_consecutive_same_adf(tmp_path):
@@ -155,11 +169,17 @@ def test_handle_adf_collapses_consecutive_same_adf(tmp_path):
     by_rom, patched = _fresh()
     _handle_adf(
         {"adf": str(adf), "adf_path": "L/fat95", "rom": "E0"},
-        workdir, by_rom, patched, "t.yaml",
+        workdir,
+        by_rom,
+        patched,
+        "t.yaml",
     )
     _handle_adf(
         {"adf": str(adf), "adf_path": "L/pfs3aio", "rom": "E0"},
-        workdir, by_rom, patched, "t.yaml",
+        workdir,
+        by_rom,
+        patched,
+        "t.yaml",
     )
     assert len(by_rom["E0"]) == 1
     assert by_rom["E0"][0].libs == ["L/fat95", "L/pfs3aio"]
@@ -175,24 +195,19 @@ def test_handle_adf_starts_new_group_when_adf_ref_changes(tmp_path):
     by_rom, patched = _fresh()
     _handle_adf(
         {"adf": str(adf1), "adf_path": "a", "rom": "E0"},
-        workdir, by_rom, patched, "t.yaml",
+        workdir,
+        by_rom,
+        patched,
+        "t.yaml",
     )
     _handle_adf(
         {"adf": str(adf2), "adf_path": "b", "rom": "E0"},
-        workdir, by_rom, patched, "t.yaml",
+        workdir,
+        by_rom,
+        patched,
+        "t.yaml",
     )
     assert len(by_rom["E0"]) == 2
-
-
-def test_handle_adf_modules_uses_dollar_adf_alias(tmp_path):
-    workdir = tmp_path / "wd"
-    workdir.mkdir()
-    by_rom, patched = _fresh()
-    _handle_adf(
-        {"adf_modules": "L/fat95", "rom": "E0"},
-        workdir, by_rom, patched, "t.yaml",
-    )
-    assert by_rom["E0"][0].adf_ref == "$ADF"
 
 
 # --- file -------------------------------------------------------------------
@@ -206,7 +221,10 @@ def test_handle_file_copies_into_workdir_and_records_entry(tmp_path):
     by_rom, patched = _fresh()
     _handle_file(
         {"file": str(src), "rom": "E0"},
-        workdir, by_rom, patched, "t.yaml",
+        workdir,
+        by_rom,
+        patched,
+        "t.yaml",
     )
     assert (workdir / "mod.bin").read_bytes() == b"payload"
     assert by_rom["E0"][0].name == "mod.bin"

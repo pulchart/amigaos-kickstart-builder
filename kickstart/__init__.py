@@ -9,7 +9,7 @@ from .cli import _discover_configs, _resolve_config_arg, main, parse_args
 from .config import AdfGroup, Cfg, FileEntry, SourceRomEntry
 from .residents import _annotate_residents, _print_residents, scan_residents
 
-__version__ = "1.4"
+__version__ = "2.0"
 
 __all__ = [
     "AdfGroup",

@@ -77,12 +77,12 @@ def resolve_extra_modules(
             _handle_relocate(r, workdir, by_rom, patched, name)
         elif "replace" in r:
             _handle_replace(r, workdir, by_rom, patched, name)
-        elif "adf_modules" in r or "adf" in r:
+        elif "adf" in r:
             _handle_adf(r, workdir, by_rom, patched, name)
         elif "file" in r:
             _handle_file(r, workdir, by_rom, patched, name)
         else:
-            die(f"row has no recognized verb (skip/relocate/replace/adf_modules/adf/file): {r!r}")
+            die(f"row has no recognized verb (skip/relocate/replace/adf/file): {r!r}")
 
     return dict(by_rom), patched
 
@@ -104,7 +104,6 @@ def render_template(
         model=model,
         os=model_cfg["os"],
         sourcerom_crc=model_cfg["sourcerom_crc"],
-        adf_crc=model_cfg["adf_crc"],
         saveprofile=model_cfg["saveprofile"],
         outdir=".",
         f8_modules=modules_by_rom.get("F8", []),

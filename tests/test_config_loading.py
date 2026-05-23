@@ -11,7 +11,6 @@ _MODEL = {
     "os": "3.2.3",
     "cpu": "68000",
     "sourcerom_crc": "0xDEADBEEF",
-    "adf_crc": "0xCAFEBABE",
     "saveprofile": "",
     "template": "stub.j2",
     "amigaos_dir": "/opt/x",

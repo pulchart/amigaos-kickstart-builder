@@ -43,16 +43,15 @@ modules:
   #- {relocate: "carddisk.device", os: "3.1", rom: "E0"}
 
   # ---------------------------------------------------------------------------
-  # adf_modules: add a library from the model's own modules ADF (3.2.3 only)
-  # ---------------------------------------------------------------------------
-
-  #- {adf_modules: "LIBS/workbench.library", os: "3.2.3", rom: "E0"}
-  #- {adf_modules: "LIBS/icon.library",      os: "3.2.3", rom: "E0"}
-
-  # ---------------------------------------------------------------------------
   # adf: add a library from a specific ADF file
   # ---------------------------------------------------------------------------
 
+  # From the 3.2.3 model's own modules ADF (gate by `cpu:` since A600 and
+  # A1200 ship different per-model ADFs):
+  #- {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA600_3.2.3.adf",  adf_path: "LIBS/workbench.library", os: "3.2.3", cpu: "68000", rom: "E0"}
+  #- {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA1200_3.2.3.adf", adf_path: "LIBS/workbench.library", os: "3.2.3", cpu: "68020", rom: "E0"}
+
+  # From a generic per-OS ADF (no per-model split):
   #- {adf: "/opt/AmigaOS/AmigaOS3.2/adf/workbench3.2.adf", adf_path: "Libs/rexxsyslib.library", os: "3.2.3", rom: "E0"}
   #- {adf: "/opt/AmigaOS/AmigaOS3.1/ADFs/wbench31.adf",    adf_path: "Libs/rexxsyslib.library", os: "3.1",   rom: "E0"}
 

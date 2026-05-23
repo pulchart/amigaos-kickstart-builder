@@ -12,7 +12,7 @@ from .config import Cfg
 from .errors import die
 from .paths import CONFIG_DIR, OUT_DIR
 
-__version__ = "1.4"
+__version__ = "2.0"
 
 
 _TARGETS_HELP = """\
@@ -48,7 +48,6 @@ kickstart.yaml schema reference:
       os              AmigaOS version string, e.g. "3.2.3"
       cpu             "68000" or "68020"
       sourcerom_crc   CRC of the Capitoline source ROM
-      adf_crc         CRC of the modules ADF
       saveprofile     Capitoline saveprofile directive (empty string = none)
       template        Jinja2 template filename under templates/
       amigaos_dir     Path to the AmigaOS installation (must contain ROMs/ and ADFs/)
@@ -58,9 +57,6 @@ kickstart.yaml schema reference:
     exactly one verb; `rom:` is mandatory on every verb except `skip:`.
 
     Verbs:
-      {adf_modules: <inner-path>, rom: "E0"|"F8"}
-          Add a single library from the model's own modules ADF.
-
       {adf: <adf-path>, adf_path: <inner-path>, rom: "E0"|"F8"}
           Add a library from a specific ADF file (absolute path).
           Consecutive rows sharing the same ADF are collapsed into one loadadf.

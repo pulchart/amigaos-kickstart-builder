@@ -86,7 +86,6 @@ The set of extra modules and the per-machine config live in `config/cfd.yaml` (t
 |---|---|---|
 | `file: <path>` + `rom: "E0"\|"F8"` | add a file from disk | `path` absolute or repo-relative; copied into workdir and added by basename. |
 | `adf: <path>` + `adf_path: <inner>` + `rom: "E0"\|"F8"` | add a lib from a specific ADF | Capitoline `loadadf "<adf>"; add ADF:/<inner>`. **`adf_path:` is case-sensitive** (capcli does exact-case lookup against ADF entries); typos fail the build via the `error:` log guard rather than silently dropping the component. |
-| `adf_modules: <inner>` + `rom: "E0"\|"F8"` | add a lib from the model's modules ADF | Shorthand for `adf:` + `adf_path:` using `$ADF`; 3.2.3 only (3.1 has no modules ADF). Same case-sensitivity caveat as `adf:`. |
 | `replace: <stock>` + (`with: <path>` or `adf:` + `adf_path:`) + `rom: "F8"\|"E0"` | swap a stock F8 module for a replacement binary | `rom: "F8"` substitutes at the stock slot; `rom: "E0"` suppresses the F8 line and lands the substitute in E0 (useful when it exceeds the F8 budget). |
 | `skip: <stock>` | drop a stock F8 module from the build | The module isn't added anywhere. No `rom:` (rejected). |
 | `relocate: <stock>` + `rom: "E0"` | move a stock F8 module to E0 | Keeps the original content; only the ROM bank changes. `rom: "E0"` is the only valid value. |

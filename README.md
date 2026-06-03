@@ -2,7 +2,7 @@
 
 YAML-driven builder for custom **1 MB AmigaOS Kickstart ROMs** with optional embedded modules. Drives Capitoline `capcli.Linux` from a single per-model config, supports AmigaOS **3.2.3, 3.1, 2.05, and 2.04** source ROMs, and lets you slot extra modules (filesystem handlers, drivers, libraries) into the E0 bank, or substitute / skip / relocate stock modules in F8.
 
-Originally written to bake `compactflash.device` + `ptable.library` ([cfd project](https://github.com/pulchart/cfd)) into the Kickstart so RDB-partitioned CF cards autoboot before any disk-loaded driver. Generalises beyond `cfd` any module that has a `file:` (hunk binary) or `adf:` + `adf_path:` (entry inside an ADF) can be added.
+Originally written to bake `compactflash.device` + `ptable.library` ([cfd project](https://github.com/pulchart/cfd)) into the Kickstart so RDB-partitioned CF cards autoboot before any disk-loaded driver. Generalises beyond `cfd`, with config profiles for different module sets.
 
 ## Prerequisites
 
@@ -18,8 +18,8 @@ The builder runs on Linux and shells out to [Capitoline](http://capitoline.twoca
 | 6 | AmigaOS 2.05 ROM (v37.350, CRC `0x43b0df7b`) | `/opt/AmigaOS/AmigaOS2.05/ROMs/` | any 2.05 target |
 | 7 | AmigaOS 2.04 ROM (v37.175 A500+, CRC `0xc3bdb240`) | `/opt/AmigaOS/AmigaOS2.04/ROMs/` | any 2.04 target |
 | 8 | [pfs3aio](https://github.com/tonioni/pfs3aio) v20.0 test5 from [EAB  PFS3aio v3.2 test](https://eab.abime.net/showthread.php?t=115072) | `/opt/AmigaOS/pfs/v20,0/` | `cfd.yaml`, `iconlib.yaml` |
-| 9 | [fat95](https://github.com/pulchart/fat95/releases) (68000 + 68020) | `/opt/AmigaOS/fat95/3.22/{68000,68020}/` | `cfd.yaml` only |
-| 10 | [cfd](https://github.com/pulchart/cfd/releases) `compactflash.device` + `ptable.library` | `/opt/AmigaOS/cfd/1.42/full/{68000,68020}/{devs,libs}/` | `cfd.yaml` only (3.2.3 / 3.1 / 2.05; A500plus-2.04 omitted, no PCMCIA or IDE) |
+| 9 | [fat95](https://github.com/pulchart/fat95/releases) (68000 + 68020) | `/opt/AmigaOS/fat95/3.23/{68000,68020}/` | `cfd.yaml` only |
+| 10 | [cfd](https://github.com/pulchart/cfd/releases) `compactflash.device` + `ptable.library` | `/opt/AmigaOS/cfd/1.43/full/{68000,68020}/{devs,libs}/` | `cfd.yaml` only (3.2.3 / 3.1 / 2.05; A500plus-2.04 omitted, no PCMCIA or IDE) |
 | 11 | [IconLib 46.4](https://aminet.net/package/util/libs/IconLib_46.4) (`icon.library` 68000 + 68020) | `/opt/AmigaOS/IconLib/46.4.602/Libs/{,68000/}icon.library` | `iconlib.yaml` only |
 
 If a required prerequisite for a target you're building is missing, the script reports an error and stops. Targets you don't build don't need their source trees. Capitoline / ROMs / ADFs are user-supplied (none are bundled here).

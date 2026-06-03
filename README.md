@@ -1,14 +1,35 @@
 # amigaos-kickstart-builder
 
-YAML-driven builder for custom **1 MB AmigaOS Kickstart ROMs** with optional embedded modules. Drives Capitoline `capcli.Linux` from a single per-model config, supports AmigaOS **3.2.3, 3.1, 2.05, and 2.04** source ROMs, and lets you slot extra modules (filesystem handlers, drivers, libraries) into the E0 bank, or substitute / skip / relocate stock modules in F8.
+YAML-driven builder for custom **1 MB AmigaOS Kickstart ROMs** with optional embedded modules. Drives Capitoline `capcli.Linux` from a single per-model config, supports AmigaOS 3.2.3, 3.1, 2.05, and 2.04 source ROMs, and lets you slot extra modules (filesystem handlers, drivers, libraries) into the E0 bank, or substitute / skip / relocate stock modules in F8.
 
 Originally written to bake `compactflash.device` + `ptable.library` ([cfd project](https://github.com/pulchart/cfd)) into the Kickstart so RDB-partitioned CF cards autoboot before any disk-loaded driver. Generalises beyond `cfd`, with config profiles for different module sets.
+
+## Contents
+
+- [Quickstart](#quickstart)
+- [Prerequisites](#prerequisites)
+- [Usage](#usage)
+- [Config profiles](#config-profiles)
+- [Worked example: A1200 3.2.3 with cfd + pfs3aio + fat95](#worked-example-a1200-323-with-cfd--pfs3aio--fat95)
+- [Customising the build](#customising-the-build)
+- [Flashing](#flashing)
+- [Deeper docs](#deeper-docs)
+- [Licensing and IP boundary](#licensing-and-ip-boundary)
+
+## Quickstart
+
+```sh
+sudo dnf install python3-jinja2 python3-pyyaml python3-tabulate    # or your distro's equivalent
+# install Capitoline + at least one AmigaOS source (see Prerequisites)
+./kickstart.py 3.2.3                                          # builds A600 + A1200 3.2.3 ROMs
+ls out/*/A600-3.2.3/*.rom                                           # one ROM per config profile
+```
 
 ## Prerequisites
 
 The builder runs on Linux and shells out to [Capitoline](http://capitoline.twocatsblack.com/index.php/capcli/).
 
-| # | Prerequisite | Install at | Config profiles |
+| # | Prerequisite | Install at | Needed by |
 |---|---|---|---|
 | 1 | Python 3.10+ with `jinja2`, `pyyaml`, `tabulate` | system packages | all configs |
 | 2 | [Capitoline](http://capitoline.twocatsblack.com/) (`capcli.Linux`, `Components/`, `Capitoline Hashes/`) | `/opt/Capitoline/` | all configs |
@@ -29,22 +50,24 @@ For the technical details behind the scantable patches, see [docs/kickstart-scan
 ## Usage
 
 ```sh
-python3 kickstart.py                    # all non-underscore configs in config/, every variant
-python3 kickstart.py -c config/cfd.yaml # same, explicit config selection
-python3 kickstart.py 3.2.3              # both 3.2.3 ROMs
-python3 kickstart.py 3.1                # both 3.1 ROMs
-python3 kickstart.py 2.0x               # both 2.0x ROMs (A600-2.05 + A500plus-2.04)
-python3 kickstart.py 2.05               # A600-2.05 ROM only
-python3 kickstart.py 2.04               # A500plus-2.04 ROM only
-python3 kickstart.py a1200-3.1          # one specific model
+./kickstart.py                    # all non-underscore configs in config/, every variant
+./kickstart.py -c cfd             # same, explicit config selection
+./kickstart.py 3.2.3              # both 3.2.3 ROMs
+./kickstart.py 3.1                # both 3.1 ROMs
+./kickstart.py 2.0x               # both 2.0x ROMs (A600-2.05 + A500plus-2.04)
+./kickstart.py 2.05               # A600-2.05 ROM only
+./kickstart.py 2.04               # A500plus-2.04 ROM only
+./kickstart.py a1200-3.1          # one specific model
 
 # select a different config profile (see Config profiles below)
-python3 kickstart.py -c config/bare.yaml 3.2.3
-python3 kickstart.py -c config/iconlib.yaml a600
+./kickstart.py -c bare 3.2.3
+./kickstart.py -c iconlib a600
 
 # override the output basename
-python3 kickstart.py -c config/bare.yaml -n myrom a600
+./kickstart.py -c bare -n myrom a600
 ```
+
+`-c` accepts a shortname (resolved against `config/<name>.yaml`) or a full path.
 
 Output lands in `out/<name>/<MODEL>/` where `<name>` is the config stem (or `-n` override) and `<MODEL>` is one of `A600-3.2.3`, `A1200-3.2.3`, `A600-3.1`, `A1200-3.1`, `A600-2.05`, `A500plus-2.04`:
 
@@ -57,30 +80,61 @@ Output lands in `out/<name>/<MODEL>/` where `<name>` is the config stem (or `-n`
 | `capitoline.log` | full Capitoline build log |
 | `capitoline.script` | rendered script that was fed to `capcli.Linux` |
 
+A successful run ends with a resident-module table like this (truncated):
+
+```text
+Residents in cfd.rom: A1200-3.2.3 (53 found, 2 shadowed by higher version):
+  Bank    Addr    Type      Ver    Pri  Name                     IDString                                              Notes
+  ------  ------  ------  -----  -----  -----------------------  ----------------------------------------------------  ------------------
+  F8      F80000  lib        47      0  exec.library             exec 47.13 (1.1.2025)
+  ...
+  F8      FFCB78  lib        40   -120  workbench.library        workbench.library 47.42 (1.1.2025)                    shadowed -> E0 v47
+  E0      E00014  lib        47   -120  workbench.library        workbench.library 47.42 (1.1.2025)
+  E0      E352F8  lib        47      0  rexxsyslib.library       rexxsyslib 47.2 (19.8.2019)
+  E0      E3DDBA  t0         20     78  pfs3aio                  Professional-File-System-III 20.0 PFS3AIO-VERSION...
+  E0      E4CB1A  t0          3      0  fat95                    fat95 3.23 (19.05.2026) [68020]
+  E0      E538A0  dev         1     21  compactflash.device      compactflash.device 1.43 (19.05.2026) [68020]
+```
+
+If the table is missing or any row looks wrong, check `capitoline.log` in the same output directory.
+
 ## Config profiles
 
 Three profiles are bundled under `config/`. All share the same hardware model definitions (`config/_models.yaml`); only the `modules:` list differs.
 
 | Profile | Command | What it adds to E0 (and F8) |
 |---|---|---|
-| `cfd.yaml` | `python3 kickstart.py` | workbench.library, icon.library, rexxsyslib, pfs3aio, fat95, **compactflash.device + ptable.library** (cfd; 3.2.3 / 3.1 / 2.05 only) |
-| `bare.yaml` | `python3 kickstart.py -c config/bare.yaml` | AmigaOS's native rom extension: workbench.library, icon.library (stock), rexxsyslib |
-| `iconlib.yaml` | `python3 kickstart.py -c config/iconlib.yaml` | workbench.library, **icon.library 46.4.602** (replaces stock), rexxsyslib, pfs3aio |
+| `cfd.yaml` | `./kickstart.py -c cfd` | workbench.library, icon.library, rexxsyslib, pfs3aio, fat95, **compactflash.device + ptable.library** (cfd; 3.2.3 / 3.1 / 2.05 only) |
+| `bare.yaml` | `./kickstart.py -c bare` | AmigaOS's native rom extension: workbench.library, icon.library (stock), rexxsyslib |
+| `iconlib.yaml` | `./kickstart.py -c iconlib` | workbench.library, **icon.library 46.4.602** (replaces stock), rexxsyslib, pfs3aio |
 
 To create your own profile, copy any existing config file, adjust the `modules:` list, and pass it with `-c`:
 
 ```sh
 cp config/bare.yaml config/myprofile.yaml
 # edit config/myprofile.yaml
-python3 kickstart.py -c config/myprofile.yaml 3.2.3
+./kickstart.py -c myprofile 3.2.3
 # output: out/myprofile/A600-3.2.3/myprofile.rom, out/myprofile/A1200-3.2.3/myprofile.rom
 ```
 
 The `models_from: _models.yaml` line at the top of every config pulls in the shared hardware model definitions automatically.
 
+## Worked example: A1200 3.2.3 with cfd + pfs3aio + fat95
+
+End-to-end from a clean machine to two flashable EPROM images.
+
+1. Install the prerequisites listed in rows 1, 2, 3, 4, 8, 9, 10 of the [Prerequisites](#prerequisites) table: Python deps, Capitoline, the Hyperion 3.2.3 update, Workbench 3.2 ADF, pfs3aio, fat95, cfd.
+2. Build:
+   ```sh
+   ./kickstart.py -c cfd a1200-3.2.3
+   ```
+3. Flash:
+   - `out/cfd/A1200-3.2.3/cfd.hi.bin` to the upper Kickstart EPROM (27C400).
+   - `out/cfd/A1200-3.2.3/cfd.lo.bin` to the lower Kickstart EPROM (27C400).
+
 ## Customising the build
 
-The set of extra modules and the per-machine config live in `config/cfd.yaml` (the default). Run `python3 kickstart.py --help` for usage and `python3 kickstart.py --help-config` for the full schema. Each entry in the `modules:` list uses one of these verbs:
+Bundled profiles live under `config/`; when no `-c` is given, every non-underscore profile is built. Run `./kickstart.py --help` for usage and `./kickstart.py --help-config` for the full schema. Each entry in the `modules:` list uses one of these verbs:
 
 | Verb (full signature) | Effect | Notes |
 |---|---|---|
@@ -101,24 +155,19 @@ Order in the `modules:` list = order of `add` directives in the rendered Capitol
 
 Output filenames use `<name>` (the config stem, or `-n` override).
 
+See the [Usage](#usage) section for the full list of files written under `out/<name>/<MODEL>/`. The flashing-relevant subset:
+
 ### A1200: dual-chip layout
 
-The A1200 Kickstart socket takes two 512 KB (4 Mbit) EPROMs wired in parallel (odd/even byte lanes). The builder produces ready-to-flash split images with the byteswap already applied:
-
-| File | Description |
-|---|---|
-| `<name>.hi.bin` | upper chip (odd bytes) for 27C400 (4 Mbit, DIP42) |
-| `<name>.lo.bin` | lower chip (even bytes) for 27C400 (4 Mbit, DIP42) |
-| `<name>.F8` | F8 bank (512 KB, `0xF80000`) for FS-UAE |
-| `<name>.E0` | E0 bank (512 KB, `0xE00000`) for FS-UAE |
+The A1200 Kickstart socket takes two 512 KB (4 Mbit) EPROMs wired in parallel (odd/even byte lanes). The builder produces ready-to-flash split images with the byteswap already applied: flash `<name>.hi.bin` to the upper chip and `<name>.lo.bin` to the lower chip (both 27C400 / 4 Mbit / DIP42).
 
 ### A600 / A500+: single-chip layout
 
-| File | Description |
-|---|---|
-| `<name>.rom` | 1 MB merged image (F8 + E0 concatenated) for 27C800 (8Mbit, DIP42) |
-| `<name>.F8` | F8 bank (512 KB, `0xF80000`) for FS-UAE |
-| `<name>.E0` | E0 bank (512 KB, `0xE00000`) for FS-UAE |
+Flash the merged 1 MB `<name>.rom` to a single 27C800 (8 Mbit / DIP42).
+
+### FS-UAE
+
+For emulator use, point FS-UAE at the `<name>.F8` and `<name>.E0` halves instead of flashing anything.
 
 ### Programmer
 
@@ -132,6 +181,11 @@ The **T48 (MiniPro)** handles 27C400 and 27C800 directly; the **TL866II Plus** (
 
 ## Licensing and IP boundary
 
+The builder itself is MIT-licensed; ROMs, ADFs, and bundled third-party modules carry their own licences and are not redistributed.
+
+<details>
+<summary>Full IP scope (click to expand)</summary>
+
 The MIT licence (`LICENSE`) covers the **builder itself**: the Python driver, the YAML config under `config/`, the Jinja templates under `templates/`, and the docs in this repo. Everything else lives outside the repo and carries its own licence:
 
 - **Capitoline `capcli.Linux`** (from the [capitoline.twocatsblack.com](http://capitoline.twocatsblack.com/)). This builder doesn't ship `capcli.Linux` or the `Capitoline Hashes/` database, `kickstart.py` shells out to whatever you have downloaded at `/opt/Capitoline/`.
@@ -142,3 +196,5 @@ The MIT licence (`LICENSE`) covers the **builder itself**: the Python driver, th
 - **pfs3aio** is a third-party AmigaOS PFS3 filesystem handler (Professional-File-System-III, originally by Michiel Pelt / Peltin BV; AIO variant maintained at [tonioni/pfs3aio](https://github.com/tonioni/pfs3aio)). The builder reads it as a plain file from `/opt/AmigaOS/pfs/<version>/pfs3aio`. License: see the pfs3aio distribution; the builder doesn't bundle it.
 
 If you fork or extend the builder, the MIT licence applies to your fork's source. The output ROMs your fork produces remain subject to the upstream Kickstart / ADF / filesystem-handler / cfd licences regardless.
+
+</details>

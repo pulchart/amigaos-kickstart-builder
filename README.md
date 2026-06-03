@@ -19,10 +19,10 @@ Originally written to bake `compactflash.device` + `ptable.library` ([cfd projec
 ## Quickstart
 
 ```sh
-sudo dnf install python3-jinja2 python3-pyyaml python3-tabulate    # or your distro's equivalent
+sudo dnf install python3-jinja2 python3-pyyaml python3-tabulate # or your distro's equivalent
 # install Capitoline + at least one AmigaOS source (see Prerequisites)
-./kickstart.py 3.2.3                                          # builds A600 + A1200 3.2.3 ROMs
-ls out/*/A600-3.2.3/*.rom                                           # one ROM per config profile
+./kickstart.py 3.2.3         # builds A600 + A1200 3.2.3 ROMs
+ls out/*/A600-3.2.3/*.rom    # one ROM per config profile
 ```
 
 ## Prerequisites

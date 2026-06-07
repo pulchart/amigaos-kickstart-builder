@@ -41,7 +41,9 @@ The builder runs on Linux and shells out to [Capitoline](http://capitoline.twoca
 | 8 | [pfs3aio](https://github.com/tonioni/pfs3aio) v20.0 test5 from [EAB  PFS3aio v3.2 test](https://eab.abime.net/showthread.php?t=115072) | `/opt/AmigaOS/pfs/v20,0/` | `cfd.yaml`, `iconlib.yaml` |
 | 9 | [fat95](https://github.com/pulchart/fat95/releases) (68000 + 68020) | `/opt/AmigaOS/fat95/3.23/{68000,68020}/` | `cfd.yaml` only |
 | 10 | [cfd](https://github.com/pulchart/cfd/releases) `compactflash.device` + `ptable.library` | `/opt/AmigaOS/cfd/1.43/full/{68000,68020}/{devs,libs}/` | `cfd.yaml` only (3.2.3 / 3.1 / 2.05; A500plus-2.04 omitted, no PCMCIA or IDE) |
-| 11 | [IconLib 46.4](https://aminet.net/package/util/libs/IconLib_46.4) (`icon.library` 68000 + 68020) | `/opt/AmigaOS/IconLib/46.4.602/Libs/{,68000/}icon.library` | `iconlib.yaml` only |
+| 11 | sfs [1.279](https://aminet.net/package/disk/misc/SFS) or [1.279](http://strohmayer.org/sfs/files/SFS_1.279_68k.lha) + [SFS_Fix.lha (1.279->1.280 patch)](http://www.doobreynet.co.uk/files/amiga/SFS_Fix.lha) | `/opt/AmigaOS/sfs/v1.279/SmartFilesystem` | `cfd.yaml`, `iconlib.yaml` |
+| 12 | [IconLib 46.4](https://aminet.net/package/util/libs/IconLib_46.4) (`icon.library` 68000 + 68020) | `/opt/AmigaOS/IconLib/46.4.602/Libs/{,68000/}icon.library` | `cfd.yaml`, `iconlib.yaml` |
+
 
 If a required prerequisite for a target you're building is missing, the script reports an error and stops. Targets you don't build don't need their source trees. Capitoline / ROMs / ADFs are user-supplied (none are bundled here).
 
@@ -104,9 +106,11 @@ Three profiles are bundled under `config/`. All share the same hardware model de
 
 | Profile | Command | What it adds to E0 (and F8) |
 |---|---|---|
-| `cfd.yaml` | `./kickstart.py -c cfd` | workbench.library, icon.library, rexxsyslib, pfs3aio, fat95, **compactflash.device + ptable.library** (cfd; 3.2.3 / 3.1 / 2.05 only) |
+| `cfd.yaml` | `./kickstart.py -c cfd` | workbench.library, icon.library, rexxsyslib, pfs3aio, sfs, fat95, **compactflash.device + ptable.library** (cfd; 3.2.3 / 3.1 / 2.05 only) |
 | `bare.yaml` | `./kickstart.py -c bare` | AmigaOS's native rom extension: workbench.library, icon.library (stock), rexxsyslib |
-| `iconlib.yaml` | `./kickstart.py -c iconlib` | workbench.library, **icon.library 46.4.602** (replaces stock), rexxsyslib, pfs3aio |
+| `iconlib.yaml` | `./kickstart.py -c iconlib` | workbench.library, **icon.library 46.4.602** (replaces stock), rexxsyslib, pfs3aio, sfs |
+
+SmartFilesystem (sfs) is embedded only in the A1200 ROMs for 3.1 and 3.2.3: it requires a 68020 or better CPU and Kickstart 3.0+, so the 68000 models (A600, A500+) and the 2.0x ROMs omit it. pfs3aio and fat95 run on any model (fat95 ships separate 68000 and 68020 builds, picked per model).
 
 To create your own profile, copy any existing config file, adjust the `modules:` list, and pass it with `-c`:
 
@@ -123,7 +127,7 @@ The `models_from: _models.yaml` line at the top of every config pulls in the sha
 
 End-to-end from a clean machine to two flashable EPROM images.
 
-1. Install the prerequisites listed in rows 1, 2, 3, 4, 8, 9, 10 of the [Prerequisites](#prerequisites) table: Python deps, Capitoline, the Hyperion 3.2.3 update, Workbench 3.2 ADF, pfs3aio, fat95, cfd.
+1. Install the prerequisites listed in the [Prerequisites](#prerequisites) table: Python deps, Capitoline, the Hyperion 3.2.3 update, Workbench 3.2 ADF, IconLib, pfs3aio, fat95, cfd, sfs.
 2. Build:
    ```sh
    ./kickstart.py -c cfd a1200-3.2.3
@@ -194,6 +198,7 @@ The MIT licence (`LICENSE`) covers the **builder itself**: the Python driver, th
 - **cfd modules** (`compactflash.device`, `ptable.library`) are LGPL v2.1 from the [cfd project](https://github.com/pulchart/cfd). The builder reads them as plain files from `/opt/AmigaOS/cfd/<version>/full/...`.
 - **fat95** (AmigaOS FAT filesystem handler) is LGPL v2.1 from the [fat95 project](https://github.com/pulchart/fat95). The builder reads it as a plain file from `/opt/AmigaOS/fat95/<version>/<cpu>/fat95`.
 - **pfs3aio** is a third-party AmigaOS PFS3 filesystem handler (Professional-File-System-III, originally by Michiel Pelt / Peltin BV; AIO variant maintained at [tonioni/pfs3aio](https://github.com/tonioni/pfs3aio)). The builder reads it as a plain file from `/opt/AmigaOS/pfs/<version>/pfs3aio`. License: see the pfs3aio distribution; the builder doesn't bundle it.
+- **sfs** a third-party AmigaOS filesystem handler from John Hendrikx and Joerg Strohmayer patched by Doobrey.
 
 If you fork or extend the builder, the MIT licence applies to your fork's source. The output ROMs your fork produces remain subject to the upstream Kickstart / ADF / filesystem-handler / cfd licences regardless.
 

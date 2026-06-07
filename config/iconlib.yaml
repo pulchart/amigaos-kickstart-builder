@@ -1,19 +1,21 @@
 models_from: _models.yaml
 
 modules:
-  # icon.library:
-  - {skip: "icon.library"} # omit the stock icon.library (<=3.1)
-  - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/icon.library", cpu: "68020", rom: "E0"}
-  - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/68000/icon.library", cpu: "68000", rom: "E0"}
-
   # workbench.library from the model's modules ADF (3.2.3 only):
+  # 3.1 has them in F8 source ROM). ADF-sourced rows must use rom: "E0".
   - {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA600_3.2.3.adf",  adf_path: "LIBS/workbench.library", os: "3.2.3", cpu: "68000", rom: "E0"}
   - {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA1200_3.2.3.adf", adf_path: "LIBS/workbench.library", os: "3.2.3", cpu: "68020", rom: "E0"}
 
-  # rexxsyslib from a specific Workbench ADF:
-  - {adf: "/opt/AmigaOS/AmigaOS3.2/adf/workbench3.2.adf", adf_path: "Libs/rexxsyslib.library", os: "3.2.3", rom: "E0"}
-  - {adf: "/opt/AmigaOS/AmigaOS3.1/ADFs/wbench31.adf", adf_path: "Libs/rexxsyslib.library", os: "3.1", rom: "E0"}
+  # rexxsyslib from a specific Workbench ADF, per OS.
+  - {adf: "/opt/AmigaOS/AmigaOS3.2/adf/workbench3.2.adf",        adf_path: "Libs/rexxsyslib.library", os: "3.2.3",               rom: "E0"}
+  - {adf: "/opt/AmigaOS/AmigaOS3.1/ADFs/wbench31.adf",           adf_path: "Libs/rexxsyslib.library", os: "3.1",                 rom: "E0"}
+
+  # icon.library from IconLIB:
+  - {skip: "icon.library"} # omit the stock icon.library (<=3.1)
+  - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/icon.library",       cpu: "68020", rom: "E0"}
+  - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/68000/icon.library", cpu: "68000", rom: "E0"}
 
   # Filesystems:
-  - {file: "/opt/AmigaOS/pfs/v20,0/pfs3aio", rom: "E0"}
-
+  - {file: "/opt/AmigaOS/pfs/v20,0/pfs3aio",                                      rom: "E0"}
+  - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem",  cpu: "68020", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem",  cpu: "68020", os: "3.1",   rom: "E0"}

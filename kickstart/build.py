@@ -48,6 +48,34 @@ def preflight(cfg: Cfg, models: list[str]) -> None:
             die(f"Missing template {tmpl} (for {m})")
 
 
+_SELECTORS = ("os", "cpu")
+
+
+def _specificity(r: dict) -> int:
+    """How many selector keys a row pins; more selectors = more specific."""
+    return sum(1 for k in _SELECTORS if r.get(k))
+
+
+def _row_target(r: dict) -> tuple[str | None, bool]:
+    """Return `(module_name, is_placement)` for a row.
+
+    Placement rows (file/adf/replace/relocate) emit an `add` for a module and
+    therefore compete for most-specific-wins; `skip` only suppresses a stock
+    slot, so it never competes and always applies.
+    """
+    if "skip" in r:
+        return r["skip"], False
+    if "relocate" in r:
+        return r["relocate"], True
+    if "replace" in r:
+        return r["replace"], True
+    if "adf" in r:
+        return Path(r.get("adf_path", "")).name or None, True
+    if "file" in r:
+        return Path(r.get("file", "")).name or None, True
+    return None, False
+
+
 def resolve_extra_modules(
     cfg: Cfg, workdir: Path, cpu: str, os_: str
 ) -> tuple[dict[str, list], dict[str, str]]:
@@ -60,15 +88,35 @@ def resolve_extra_modules(
     - `patched_modules`: dict mapping a stock F8 module name to the
       capcli-script fragment that replaces its natural `add "$SOURCEROM"
       <name>` line.
+
+    When several placement rows resolve to the same module name, the most
+    specific match wins: a row pinning both `os:` and `cpu:` beats one pinning
+    only `cpu:`, which beats an unscoped row.  This lets a module be placed in
+    a different ROM bank per OS/CPU from one terse set of rows.  `skip` rows do
+    not compete and always apply.
     """
     by_rom: dict[str, list] = defaultdict(list)
     patched: dict[str, str] = {}
     name = cfg.yaml_path.name
 
-    for r in cfg.config["modules"]:
-        if r.get("cpu") and r["cpu"] != cpu:
-            continue
-        if r.get("os") and r["os"] != os_:
+    # Rows passing the cpu/os filter, in original order (order matters for ADF
+    # collapsing and F8 module sequencing).
+    matching = [
+        r
+        for r in cfg.config["modules"]
+        if not (r.get("cpu") and r["cpu"] != cpu) and not (r.get("os") and r["os"] != os_)
+    ]
+
+    # Most-specific-wins: per placement target, drop rows below the top tier.
+    max_spec: dict[str, int] = {}
+    for r in matching:
+        target, is_placement = _row_target(r)
+        if is_placement and target is not None:
+            max_spec[target] = max(max_spec.get(target, -1), _specificity(r))
+
+    for r in matching:
+        target, is_placement = _row_target(r)
+        if is_placement and target is not None and _specificity(r) < max_spec[target]:
             continue
 
         if "skip" in r:
@@ -129,7 +177,7 @@ def run_capcli(workdir: Path, script: Path) -> Path:
         )
     if result.returncode != 0:
         _dump_log_tail(log)
-        die(f"capcli.Linux failed - see {log}")
+        die(f"capcli.Linux failed - see {workdir}")
     # capcli exits 0 even when it silently drops `add` directives that
     # don't fit or can't be processed; surface those so the build doesn't
     # ship a broken ROM.
@@ -137,10 +185,10 @@ def run_capcli(workdir: Path, script: Path) -> Path:
     log_lc = log_text.lower()
     if "space in rom" in log_lc:
         _dump_log_tail(log)
-        die(f"capcli reported 'no space in rom' - module silently dropped. See {log}")
+        die(f"capcli reported 'no space in rom' - module silently dropped. See {workdir}")
     if "error:" in log_lc:
         _dump_log_tail(log)
-        die(f"capcli logged an ERROR - module(s) likely dropped silently. See {log}")
+        die(f"capcli logged an ERROR - module(s) likely dropped silently. See {workdir}")
     return log
 
 
@@ -305,5 +353,14 @@ def build_one(cfg: Cfg, model: str, verbose: bool = True, name: str = "cfd") -> 
     try:
         artefacts = _build_in_workdir(cfg, model, model_cfg, workdir)
         _finalise_output(artefacts, model, name, verbose)
-    finally:
+    except BaseException:
+        # Keep the workdir on failure so the capcli log/script referenced in
+        # the error message survive for inspection (a fresh build of this
+        # model rmtrees the stale workdir in _prepare_workdir first).
+        print(
+            _c(f"  Workdir kept for inspection: {workdir}", _YELLOW),
+            file=sys.stderr,
+        )
+        raise
+    else:
         shutil.rmtree(workdir, ignore_errors=True)

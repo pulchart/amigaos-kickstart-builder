@@ -41,7 +41,7 @@ var FIND add 8
 patch $FIND 0xFFFFFFFF              # terminator
 
 # Add each stock 3.2.3 F8 module in the source ROM's natural order, with
-# any `replace`-row substitution applied (driven by kickstart.yaml; same
+# any `replace`-row substitution applied (driven by the active config; same
 # shape as the 3.1 template's substitution loop).
 {% set stock_modules = [
     "expansion.library", "mathieeesingbas.library", "graphics.library", "dos.library",

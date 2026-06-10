@@ -38,7 +38,7 @@ patch $FIND 0x$REL
 
 # Add each original 3.1 module explicitly in its natural ROM order, with any
 # patched module substituted for its replacement file (driven by `replace`/`with`
-# rows in kickstart.yaml.
+# rows in the active config).
 {% if model == "A600-3.1" %}
 {% set stock_modules = [
     "audio.device", "gameport.device", "graphics.library", "dos.library",

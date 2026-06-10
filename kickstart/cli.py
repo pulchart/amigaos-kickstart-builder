@@ -12,7 +12,7 @@ from .config import Cfg
 from .errors import die
 from .paths import CONFIG_DIR, OUT_DIR
 
-__version__ = "2.0"
+__version__ = "2.1"
 
 
 _TARGETS_HELP = """\
@@ -80,6 +80,11 @@ kickstart.yaml schema reference:
     Optional per-entry filters (rows are skipped when they do not match):
       cpu: "68000"|"68020"
       os:  "3.1"|"3.2.3"|"2.05"
+
+    When several rows place the same module, the most specific match wins:
+    a row pinning both `os:` and `cpu:` beats one pinning only `cpu:`, which
+    beats an unscoped row.  This lets a module land in a different ROM bank per
+    OS/CPU from one set of rows.  `skip` always applies (it never competes).
 
     Row order = order of `add` directives emitted into the Capitoline script.
 

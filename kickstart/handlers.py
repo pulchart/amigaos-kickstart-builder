@@ -46,7 +46,7 @@ def _handle_skip(r: dict, workdir: Path, by_rom: dict, patched: dict, config_nam
             f"aren't added to either ROM bank: {r!r}"
         )
     _ensure_unique_target(target, patched, config_name)
-    patched[target] = f"# Skipped: {target} (see kickstart.yaml)"
+    patched[target] = f"# Skipped: {target} (see {config_name})"
 
 
 def _handle_relocate(r: dict, workdir: Path, by_rom: dict, patched: dict, config_name: str) -> None:

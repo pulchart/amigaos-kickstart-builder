@@ -153,6 +153,8 @@ All verbs accept the optional filters:
 - `cpu: "68000" | "68020"`: include only for the matching CPU build.
 - `os:  "2.04" | "2.05" | "3.1" | "3.2.3"`: include only for the matching OS build.
 
+When several rows place the same module, the most specific match wins: a row pinning both `os:` and `cpu:` beats one pinning only `cpu:`, which beats an unscoped row. This lets a module land in a different ROM bank per OS/CPU from one set of rows (e.g. `icon.library` in E0 on 3.2.3, F8 otherwise). `skip` always applies; it never competes.
+
 Order in the `modules:` list = order of `add` directives in the rendered Capitoline script.
 
 ## Flashing

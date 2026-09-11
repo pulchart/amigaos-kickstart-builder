@@ -59,6 +59,6 @@ modules:
   # file: add a binary file from disk (absolute or repo-relative path)
   # ---------------------------------------------------------------------------
 
-  #- {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio",                 rom: "E0"}
-  #- {file: "/opt/AmigaOS/fat95/3.22/68000/fat95", cpu: "68000", rom: "E0"}
-  #- {file: "/opt/AmigaOS/fat95/3.22/68020/fat95", cpu: "68020", rom: "E0"}
+  #- {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio",                   rom: "E0"}
+  #- {file: "/opt/AmigaOS/fat95/4.0/68000/fat95", cpu: "68000", rom: "E0"}
+  #- {file: "/opt/AmigaOS/fat95/4.0/68020/fat95", cpu: "68020", rom: "E0"}

@@ -27,8 +27,8 @@ modules:
   - {file: "/opt/AmigaOS/fat95/4.0/68020/fat95", cpu: "68020", rom: "E0"}
   - {file: "/opt/AmigaOS/fat95/4.0/68080/fat95", cpu: "68080", rom: "E0"}
 
-  - {file: "/opt/AmigaOS/cfd/2.0/full/68000/libs/ptable.library",  cpu: "68000", os: "3.2.3", rom: "F8"}
-  - {file: "/opt/AmigaOS/cfd/2.0/full/68020/libs/ptable.library",  cpu: "68020", os: "3.2.3", rom: "F8"}
+  - {file: "/opt/AmigaOS/cfd/2.0/small/68000/libs/ptable.library", cpu: "68000", os: "3.2.3", rom: "F8"}
+  - {file: "/opt/AmigaOS/cfd/2.0/small/68020/libs/ptable.library", cpu: "68020", os: "3.2.3", rom: "F8"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68000/libs/ptable.library", cpu: "68000", os: "3.1",   rom: "E0"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68020/libs/ptable.library", cpu: "68020", os: "3.1",   rom: "E0"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68000/libs/ptable.library", cpu: "68000", os: "2.05",  rom: "E0"}
@@ -36,14 +36,14 @@ modules:
   # CompactFlash:
   # - 3.1 / 2.05 / 3.2.3 only (2.04 omits both modules entirely as A500plus has no PCMCIA slot and no internal IDE.)
   # - there is a room in F8 for ptable.library)
-  - {file: "/opt/AmigaOS/cfd/2.0/full/68020/devs/compactflash.device",  cpu: "68020", os: "3.2.3", rom: "E0"}
-  - {file: "/opt/AmigaOS/cfd/2.0/full/68000/devs/compactflash.device",  cpu: "68000", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.0/small/68020/devs/compactflash.device", cpu: "68020", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.0/small/68000/devs/compactflash.device", cpu: "68000", os: "3.2.3", rom: "E0"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68000/devs/compactflash.device", cpu: "68000", os: "3.1",   rom: "E0"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68020/devs/compactflash.device", cpu: "68020", os: "3.1",   rom: "E0"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68000/devs/compactflash.device", cpu: "68000", os: "2.05",  rom: "E0"}
 
-  - {file: "/opt/AmigaOS/cfd/2.0/full/68020/libs/compactflash.automount",  cpu: "68020", os: "3.2.3", rom: "E0"}
-  - {file: "/opt/AmigaOS/cfd/2.0/full/68000/libs/compactflash.automount",  cpu: "68000", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.0/small/68020/libs/compactflash.automount", cpu: "68020", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.0/small/68000/libs/compactflash.automount", cpu: "68000", os: "3.2.3", rom: "E0"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68000/libs/compactflash.automount", cpu: "68000", os: "3.1",   rom: "E0"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68020/libs/compactflash.automount", cpu: "68020", os: "3.1",   rom: "E0"}
   - {file: "/opt/AmigaOS/cfd/2.0/small/68000/libs/compactflash.automount", cpu: "68000", os: "2.05",  rom: "E0"}

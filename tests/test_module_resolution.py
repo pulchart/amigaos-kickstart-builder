@@ -165,3 +165,81 @@ def test_same_specificity_tie_keeps_all_rows(tmp_path):
     # Both rows are specificity 1 and both match -> neither dominates.
     assert _names(by_rom.get("E0", [])) == ["icon.library"]
     assert _names(by_rom.get("F8", [])) == ["icon.library"]
+
+
+def _accel_cfg(tmp_path: Path) -> Cfg:
+    """Three rows for one module: unscoped, model CPU, accelerator CPU."""
+    rows = []
+    for tag, sel in (("base", {}), ("m020", {"cpu": "68020"}), ("a080", {"cpu": "68080"})):
+        d = tmp_path / tag
+        d.mkdir()
+        (d / "fs.bin").write_bytes(tag.encode())
+        rows.append({"file": str(d / "fs.bin"), "rom": "E0", **sel})
+    return _cfg(tmp_path, rows)
+
+
+def _staged(workdir: Path) -> bytes:
+    return (workdir / "fs.bin").read_bytes()
+
+
+def test_accelerator_row_wins(tmp_path):
+    workdir = tmp_path / "wd"
+    workdir.mkdir()
+    by_rom, _ = resolve_extra_modules(
+        _accel_cfg(tmp_path), workdir, cpu="68020", os_="3.2.3", accel="68080"
+    )
+    assert _names(by_rom.get("E0", [])) == ["fs.bin"]
+    assert _staged(workdir) == b"a080"
+
+
+def test_without_accelerator_model_cpu_wins(tmp_path):
+    workdir = tmp_path / "wd"
+    workdir.mkdir()
+    by_rom, _ = resolve_extra_modules(_accel_cfg(tmp_path), workdir, cpu="68020", os_="3.2.3")
+    assert _names(by_rom.get("E0", [])) == ["fs.bin"]
+    assert _staged(workdir) == b"m020"
+
+
+def test_accelerator_falls_back_to_model_cpu(tmp_path):
+    """A module with no accelerator row keeps the model's own CPU row."""
+    workdir = tmp_path / "wd"
+    workdir.mkdir()
+    by_rom, _ = resolve_extra_modules(
+        _icon_cfg(tmp_path), workdir, cpu="68020", os_="3.2.3", accel="68080"
+    )
+    assert _names(by_rom.get("E0", [])) == ["icon.library"]
+    assert (workdir / "icon.library").read_bytes() == b"e0"
+
+
+def test_accelerator_row_outranks_os_and_cpu_row(tmp_path):
+    """Accelerator beats a row pinning both selectors, which outranks it otherwise."""
+    a080 = tmp_path / "a080"
+    a080.mkdir()
+    (a080 / "icon.library").write_bytes(b"a080")
+    cfg = _icon_cfg(tmp_path)
+    cfg.config["modules"].append({"file": str(a080 / "icon.library"), "cpu": "68080", "rom": "E0"})
+    workdir = tmp_path / "wd"
+    workdir.mkdir()
+    by_rom, _ = resolve_extra_modules(cfg, workdir, cpu="68020", os_="3.2.3", accel="68080")
+    assert _names(by_rom.get("E0", [])) == ["icon.library"]
+    assert (workdir / "icon.library").read_bytes() == b"a080"
+
+
+def test_as_makes_differently_named_files_one_module(tmp_path):
+    """Two toolchain builds of one handler compete only when they share `as:`."""
+    rows = []
+    for tag, fname, sel in (
+        ("m020", "fs.gcc16", {"cpu": "68020"}),
+        ("a080", "fs.gcc6", {"cpu": "68080"}),
+    ):
+        d = tmp_path / tag
+        d.mkdir()
+        (d / fname).write_bytes(tag.encode())
+        rows.append({"file": str(d / fname), "as": "fs", "rom": "E0", **sel})
+    workdir = tmp_path / "wd"
+    workdir.mkdir()
+    by_rom, _ = resolve_extra_modules(
+        _cfg(tmp_path, rows), workdir, cpu="68020", os_="3.2.3", accel="68080"
+    )
+    assert _names(by_rom.get("E0", [])) == ["fs"]
+    assert (workdir / "fs").read_bytes() == b"a080"

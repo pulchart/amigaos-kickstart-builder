@@ -67,9 +67,14 @@ For the technical details behind the scantable patches, see [docs/kickstart-scan
 
 # override the output basename
 ./kickstart.py -c bare -n myrom a600
+
+# build for a machine with an accelerator
+./kickstart.py -c cfd -a 68080 a1200-3.2.3
 ```
 
 `-c` accepts a shortname (resolved against `config/<name>.yaml`) or a full path.
+
+`-a` names an accelerator CPU. Module rows pinning it win; modules without such a row follow the model's own CPU, so the ROM is otherwise the model's. The output basename gains `.<CPU>`, leaving the plain build in place.
 
 Output lands in `out/<name>/<MODEL>/` where `<name>` is the config stem (or `-n` override) and `<MODEL>` is one of `A600-3.2.3`, `A1200-3.2.3`, `A600-3.1`, `A1200-3.1`, `A600-2.05`, `A500plus-2.04`:
 

@@ -56,6 +56,15 @@ def _specificity(r: dict) -> int:
     return sum(1 for k in _SELECTORS if r.get(k))
 
 
+def _rank(r: dict, accel: str | None) -> tuple[int, int]:
+    """Sort key for most-specific-wins.
+
+    A row pinned to the accelerator outranks every other row for the same
+    module; below that the selector count decides, as without one.
+    """
+    return (1 if accel and r.get("cpu") == accel else 0, _specificity(r))
+
+
 def _row_target(r: dict) -> tuple[str | None, bool]:
     """Return `(module_name, is_placement)` for a row.
 
@@ -72,12 +81,12 @@ def _row_target(r: dict) -> tuple[str | None, bool]:
     if "adf" in r:
         return Path(r.get("adf_path", "")).name or None, True
     if "file" in r:
-        return Path(r.get("file", "")).name or None, True
+        return r.get("as") or Path(r.get("file", "")).name or None, True
     return None, False
 
 
 def resolve_extra_modules(
-    cfg: Cfg, workdir: Path, cpu: str, os_: str
+    cfg: Cfg, workdir: Path, cpu: str, os_: str, accel: str | None = None
 ) -> tuple[dict[str, list], dict[str, str]]:
     """Walk the `modules` list from the active config; stage sources into workdir.
 
@@ -94,6 +103,10 @@ def resolve_extra_modules(
     only `cpu:`, which beats an unscoped row.  This lets a module be placed in
     a different ROM bank per OS/CPU from one terse set of rows.  `skip` rows do
     not compete and always apply.
+
+    `accel` is the accelerator CPU: rows pinning it also match, and one of them
+    wins over any other row for the same module.  Modules with no row for it
+    fall back to the model's own CPU.
     """
     by_rom: dict[str, list] = defaultdict(list)
     patched: dict[str, str] = {}
@@ -101,22 +114,23 @@ def resolve_extra_modules(
 
     # Rows passing the cpu/os filter, in original order (order matters for ADF
     # collapsing and F8 module sequencing).
+    cpus = (accel, cpu) if accel else (cpu,)
     matching = [
         r
         for r in cfg.config["modules"]
-        if not (r.get("cpu") and r["cpu"] != cpu) and not (r.get("os") and r["os"] != os_)
+        if not (r.get("cpu") and r["cpu"] not in cpus) and not (r.get("os") and r["os"] != os_)
     ]
 
     # Most-specific-wins: per placement target, drop rows below the top tier.
-    max_spec: dict[str, int] = {}
+    max_spec: dict[str, tuple[int, int]] = {}
     for r in matching:
         target, is_placement = _row_target(r)
         if is_placement and target is not None:
-            max_spec[target] = max(max_spec.get(target, -1), _specificity(r))
+            max_spec[target] = max(max_spec.get(target, (-1, -1)), _rank(r, accel))
 
     for r in matching:
         target, is_placement = _row_target(r)
-        if is_placement and target is not None and _specificity(r) < max_spec[target]:
+        if is_placement and target is not None and _rank(r, accel) < max_spec[target]:
             continue
 
         if "skip" in r:
@@ -253,10 +267,12 @@ def _prepare_workdir(model: str, model_cfg: dict) -> Path:
     return workdir
 
 
-def _build_in_workdir(cfg: Cfg, model: str, model_cfg: dict, workdir: Path) -> _BuildArtefacts:
+def _build_in_workdir(
+    cfg: Cfg, model: str, model_cfg: dict, workdir: Path, accel: str | None = None
+) -> _BuildArtefacts:
     """Resolve modules, render the capcli script, run capcli; return the produced artefacts."""
     modules_by_rom, patched_modules = resolve_extra_modules(
-        cfg, workdir, model_cfg["cpu"], model_cfg["os"]
+        cfg, workdir, model_cfg["cpu"], model_cfg["os"], accel
     )
     script = render_template(workdir, model_cfg, model, modules_by_rom, patched_modules)
     log = run_capcli(workdir, script)
@@ -334,11 +350,14 @@ def _finalise_output(artefacts: _BuildArtefacts, model: str, name: str, verbose:
         _print_residents(model, residents, rom.name)
 
 
-def build_one(cfg: Cfg, model: str, verbose: bool = True, name: str = "cfd") -> None:
+def build_one(
+    cfg: Cfg, model: str, verbose: bool = True, name: str = "cfd", accel: str | None = None
+) -> None:
     """Build one ROM for *model* using *cfg*. Output lands in ``out/<name>/<model>/``."""
     model_cfg = cfg.models[model]
     cpu = model_cfg["cpu"]
     os_ = model_cfg["os"]
+    cpu_s = f"{cpu} +{accel}" if accel else cpu
 
     print()
     print(
@@ -346,12 +365,12 @@ def build_one(cfg: Cfg, model: str, verbose: bool = True, name: str = "cfd") -> 
         + _c(name, _BOLD, _YELLOW)
         + _c(" / ", _BOLD, _CYAN)
         + _c(model, _BOLD, _CYAN)
-        + _c(f" ROM  (OS {os_}, CPU {cpu})", _BOLD, _CYAN)
+        + _c(f" ROM  (OS {os_}, CPU {cpu_s})", _BOLD, _CYAN)
     )
 
     workdir = _prepare_workdir(model, model_cfg)
     try:
-        artefacts = _build_in_workdir(cfg, model, model_cfg, workdir)
+        artefacts = _build_in_workdir(cfg, model, model_cfg, workdir, accel)
         _finalise_output(artefacts, model, name, verbose)
     except BaseException:
         # Keep the workdir on failure so the capcli log/script referenced in

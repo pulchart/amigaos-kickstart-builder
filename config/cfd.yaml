@@ -16,14 +16,16 @@ modules:
   - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/68000/icon.library", cpu: "68000", rom: "E0"}
 
   # Filesystems:
-  - {file: "/opt/AmigaOS/pfs/v20.0/68000/pfs3aio.gcc16",               rom: "E0"}
-  - {file: "/opt/AmigaOS/pfs/v20.0/68020/pfs3aio.gcc16", cpu: "68020", rom: "E0"}
+  - {file: "/opt/AmigaOS/pfs/v20.0/68000/pfs3aio.gcc16", as: "pfs3aio",               rom: "E0"}
+  - {file: "/opt/AmigaOS/pfs/v20.0/68020/pfs3aio.gcc16", as: "pfs3aio", cpu: "68020", rom: "E0"}
+  - {file: "/opt/AmigaOS/pfs/v20.0/68080/pfs3aio.gcc6",  as: "pfs3aio", cpu: "68080", rom: "E0"}
 
   - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem", cpu: "68020", os: "3.2.3", rom: "E0"}
   - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem", cpu: "68020", os: "3.1",   rom: "E0"}
 
   - {file: "/opt/AmigaOS/fat95/4.0/68000/fat95", cpu: "68000", rom: "E0"}
   - {file: "/opt/AmigaOS/fat95/4.0/68020/fat95", cpu: "68020", rom: "E0"}
+  - {file: "/opt/AmigaOS/fat95/4.0/68080/fat95", cpu: "68080", rom: "E0"}
 
   - {file: "/opt/AmigaOS/cfd/2.0/full/68000/libs/ptable.library",  cpu: "68000", os: "3.2.3", rom: "F8"}
   - {file: "/opt/AmigaOS/cfd/2.0/full/68020/libs/ptable.library",  cpu: "68020", os: "3.2.3", rom: "F8"}

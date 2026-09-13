@@ -12,7 +12,3 @@ modules:
   # rexxsyslib from a Workbench ADF (per OS).
   - {adf: "/opt/AmigaOS/AmigaOS3.2/adf/workbench3.2.adf",         adf_path: "Libs/rexxsyslib.library", os: "3.2.3",               rom: "E0"}
   - {adf: "/opt/AmigaOS/AmigaOS3.1/ADFs/wbench31.adf",            adf_path: "Libs/rexxsyslib.library", os: "3.1",                 rom: "E0"}
-
-  # Filesystems:
-  - {file: "/opt/AmigaOS/pfs/v20.0/68000/pfs3aio.gcc16",               rom: "E0"}
-  - {file: "/opt/AmigaOS/pfs/v20.0/68020/pfs3aio.gcc16", cpu: "68020", rom: "E0"}

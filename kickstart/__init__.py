@@ -5,11 +5,9 @@ Package entry point: ``./kickstart.py`` script forwards to ``kickstart.cli.main`
 
 from __future__ import annotations
 
-from .cli import _discover_configs, _resolve_config_arg, main, parse_args
+from .cli import __version__, _discover_configs, _resolve_config_arg, main, parse_args
 from .config import AdfGroup, Cfg, FileEntry, SourceRomEntry
 from .residents import _annotate_residents, _print_residents, scan_residents
-
-__version__ = "2.1"
 
 __all__ = [
     "AdfGroup",

@@ -12,7 +12,7 @@ from .config import Cfg
 from .errors import die
 from .paths import CONFIG_DIR, OUT_DIR
 
-__version__ = "2.1"
+__version__ = "2.2"
 
 
 _TARGETS_HELP = """\
@@ -63,6 +63,11 @@ kickstart.yaml schema reference:
 
       {file: <path>, rom: "E0"|"F8"}
           Copy a file from disk into the ROM bank (added by its basename).
+          Optional `as: <name>` adds it under that name instead.  Rows whose
+          files have different basenames are different modules and all land in
+          the ROM; a shared `as:` makes them one, so the CPU/OS filters pick
+          between them.  Needed when one module is built by two toolchains,
+          e.g. pfs3aio.gcc16 and pfs3aio.gcc6.
 
       {replace: <stock-name>, with: <file-path>, rom: "F8"|"E0"}
           Swap a stock F8 module with a file.  rom:"F8" replaces in-place;
@@ -78,13 +83,17 @@ kickstart.yaml schema reference:
           Move a stock F8 module to E0, keeping its original binary.
 
     Optional per-entry filters (rows are skipped when they do not match):
-      cpu: "68000"|"68020"
+      cpu: "68000"|"68020", or the CPU passed to -a/--accelerator
       os:  "3.1"|"3.2.3"|"2.05"
 
     When several rows place the same module, the most specific match wins:
     a row pinning both `os:` and `cpu:` beats one pinning only `cpu:`, which
     beats an unscoped row.  This lets a module land in a different ROM bank per
     OS/CPU from one set of rows.  `skip` always applies (it never competes).
+
+    With -a/--accelerator, a row pinning that CPU outranks every other row for
+    the same module.  Modules with no such row follow the model's own CPU, so
+    one config serves both builds.
 
     Row order = order of `add` directives emitted into the Capitoline script.
 
@@ -112,7 +121,9 @@ class _PrintAndExit(argparse.Action):
         parser.exit()
 
 
-def parse_args(argv: list[str]) -> tuple[list[str], bool, str | None, Path | None, bool]:
+def parse_args(
+    argv: list[str],
+) -> tuple[list[str], bool, str | None, Path | None, bool, str | None]:
     parser = argparse.ArgumentParser(
         prog="kickstart.py",
         description=(
@@ -166,6 +177,13 @@ def parse_args(argv: list[str]) -> tuple[list[str], bool, str | None, Path | Non
         help="basename for output files (default: stem of config filename); requires -c",
     )
     parser.add_argument(
+        "-a",
+        "--accelerator",
+        default=None,
+        metavar="CPU",
+        help="accelerator CPU, e.g. 68080: module rows pinned to it win, the rest follows the model; the output name gains .CPU",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
@@ -200,7 +218,14 @@ def parse_args(argv: list[str]) -> tuple[list[str], bool, str | None, Path | Non
             f"a600-2.05 | a500plus-2.04 | 2.04 | 2.05 | 3.1 | 3.2.3 | all"
         )
     config_path = _resolve_config_arg(args.config) if args.config else None
-    return aliases[target], not args.quiet, args.name, config_path, args.list_configs
+    return (
+        aliases[target],
+        not args.quiet,
+        args.name,
+        config_path,
+        args.list_configs,
+        args.accelerator,
+    )
 
 
 def _discover_configs() -> list[Path]:
@@ -223,7 +248,7 @@ def _resolve_config_arg(arg: str) -> Path:
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
-    models, verbose, name_arg, config_path, list_configs = parse_args(argv)
+    models, verbose, name_arg, config_path, list_configs, accel = parse_args(argv)
     if list_configs:
         for p in _discover_configs():
             print(p.stem)
@@ -238,8 +263,9 @@ def main(argv: list[str] | None = None) -> int:
         if not cp.is_file():
             die(f"Config file not found: {cp}")
         cfg = Cfg.load(cp)
-        name = name_arg if name_arg is not None else cp.stem
+        default_name = f"{cp.stem}.{accel}" if accel else cp.stem
+        name = name_arg if name_arg is not None else default_name
         preflight(cfg, models)
         for m in models:
-            build_one(cfg, m, verbose=verbose, name=name)
+            build_one(cfg, m, verbose=verbose, name=name, accel=accel)
     return 0

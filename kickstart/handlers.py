@@ -117,12 +117,17 @@ def _handle_adf(r: dict, workdir: Path, by_rom: dict, patched: dict, config_name
 
 
 def _handle_file(r: dict, workdir: Path, by_rom: dict, patched: dict, config_name: str) -> None:
-    """`file:` add a file from disk to a ROM bank by basename."""
+    """`file:` add a file from disk to a ROM bank by basename, or by `as:`.
+
+    `as:` is what makes rows whose files have different basenames compete as
+    one module, e.g. one handler built by two toolchains.
+    """
     rom = _need_rom(r)
     src = Path(r["file"])
     if not src.is_absolute():
         src = Path.cwd() / src
     if not src.is_file():
         die(f"Missing module: {src}")
-    shutil.copy2(src, workdir / src.name)
-    by_rom[rom].append(FileEntry(name=src.name))
+    name = r.get("as") or src.name
+    shutil.copy2(src, workdir / name)
+    by_rom[rom].append(FileEntry(name=name))

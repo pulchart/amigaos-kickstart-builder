@@ -16,9 +16,9 @@ modules:
   - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/68000/icon.library", cpu: "68000", rom: "E0"}
 
   # Filesystems:
-  - {file: "/opt/AmigaOS/pfs/v20.0/000/pfs3aio.gcc16",   as: "pfs3aio",               rom: "E0"}
-  - {file: "/opt/AmigaOS/pfs/v20.0/020/pfs3aio.gcc16",   as: "pfs3aio", cpu: "68020", rom: "E0"}
-  - {file: "/opt/AmigaOS/pfs/v20.0/080/pfs3aio.gcc6",    as: "pfs3aio", cpu: "68080", rom: "E0"}
+  - {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio-20260902-1-000-gcc16",   as: "pfs3aio",               rom: "E0"}
+  - {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio-20260902-1-020-gcc16",   as: "pfs3aio", cpu: "68020", rom: "E0"}
+  - {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio-20260913-1-080-gcc6",    as: "pfs3aio", cpu: "68080", rom: "E0"}
 
   - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem", cpu: "68020", os: "3.2.3", rom: "E0"}
   - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem", cpu: "68020", os: "3.1",   rom: "E0"}

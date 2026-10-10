@@ -19,8 +19,11 @@ Originally written to bake `compactflash.device` + `ptable.library` ([cfd projec
 ## Quickstart
 
 ```sh
-sudo dnf install python3-jinja2 python3-pyyaml python3-tabulate # or your distro's equivalent
+# or your distro's equivalent
+sudo dnf install python3-jinja2 python3-pyyaml python3-tabulate unzip lha
+
 # install Capitoline + at least one AmigaOS source (see Prerequisites)
+
 ./kickstart.py 3.2.3         # builds A600 + A1200 3.2.3 ROMs
 ls out/*/A600-3.2.3/*.rom    # one ROM per config profile
 ```
@@ -32,13 +35,13 @@ The builder runs on Linux and shells out to [Capitoline](http://capitoline.twoca
 | # | Prerequisite | Install at | Needed by |
 |---|---|---|---|
 | 1 | Python 3.10+ with `jinja2`, `pyyaml`, `tabulate` | system packages | all configs |
-| 2 | [Capitoline](http://capitoline.twocatsblack.com/) (`capcli.Linux`, `Components/`, `Capitoline Hashes/`) | `/opt/Capitoline/` | all configs |
-| 3 | Hyperion AmigaOS 3.2.3 Update (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/Update3.2.3/` | any 3.2.3 target |
+| 2 | [Capitoline](http://capitoline.twocatsblack.com/index.php/download/) (`capcli.Linux`, `Components/`, `Capitoline Hashes/`) | `/opt/Capitoline/` | all configs |
+| 3 | [Hyperion AmigaOS 3.2.3 Update](https://www.hyperion-entertainment.com/index.php/downloads) (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/Update3.2.3/` | any 3.2.3 target |
 | 4 | Workbench 3.2 ADF (`workbench3.2.adf`) | `/opt/AmigaOS/AmigaOS3.2/adf/` | `cfd.yaml`, `bare.yaml`, `iconlib.yaml` (rexxsyslib.library for 3.2.3) |
 | 5 | AmigaOS 3.1 (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/AmigaOS3.1/` | any 3.1 target |
 | 6 | AmigaOS 2.05 ROM (v37.350, CRC `0x43b0df7b`) | `/opt/AmigaOS/AmigaOS2.05/ROMs/` | any 2.05 target |
 | 7 | AmigaOS 2.04 ROM (v37.175 A500+, CRC `0xc3bdb240`) | `/opt/AmigaOS/AmigaOS2.04/ROMs/` | any 2.04 target |
-| 8 | [pfs3aio](https://github.com/tonioni/pfs3aio) v20.0 test5 from [EAB  PFS3aio v3.2 test](https://eab.abime.net/showthread.php?t=115072), or a per-CPU build from the [jpu fork](https://github.com/pulchart/pfs3aio/blob/jpu/README.md) (unofficial, latest fixes) | `/opt/AmigaOS/pfs/v20.0/{68000,68020}/pfs3aio.gcc16` | `cfd.yaml`, `iconlib.yaml`, `bare.yaml`, `hotplug.yaml` |
+| 8 | [pfs3aio](https://github.com/tonioni/pfs3aio) v20.0 test5 from [EAB  PFS3aio v3.2 test](https://eab.abime.net/showthread.php?t=115072), or a per-CPU build from the [jpu fork](https://github.com/pulchart/pfs3aio/releases) (unofficial, latest fixes) | `/opt/AmigaOS/pfs/v20.0/` | `cfd.yaml`, `iconlib.yaml`, `bare.yaml`, `hotplug.yaml` |
 | 9 | [fat95](https://github.com/pulchart/fat95/releases) (68000 + 68020) + `ptable.library` | `/opt/AmigaOS/fat95/4.1/{68000,68020}/` | `cfd.yaml` only |
 | 10 | [cfd](https://github.com/pulchart/cfd/releases) `compactflash.device` + `ptable.library` + `compactflash.automount` | `/opt/AmigaOS/cfd/2.1/{full,small}/{68000,68020}/{devs,libs}/` | `cfd.yaml` only (3.2.3 / 3.1 / 2.05; A500plus-2.04 omitted, no PCMCIA or IDE) |
 | 11 | sfs [1.279](https://aminet.net/package/disk/misc/SFS) or [1.279](http://strohmayer.org/sfs/files/SFS_1.279_68k.lha) + [SFS_Fix.lha (1.279->1.280 patch)](http://www.doobreynet.co.uk/files/amiga/SFS_Fix.lha) | `/opt/AmigaOS/sfs/v1.279/SmartFilesystem` | `cfd.yaml`, `iconlib.yaml` |

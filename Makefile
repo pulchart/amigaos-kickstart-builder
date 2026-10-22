@@ -11,7 +11,7 @@ BINDIR    := $(DESTDIR)$(PREFIX)/bin
 
 help:
 	@echo 'Targets:'
-	@echo '  lint       - ruff check .'
+	@echo '  lint       - ruff check . and yamllint on the tracked YAML files'
 	@echo '  format     - ruff format .'
 	@echo '  test       - pytest (unit tests of the Python code)'
 	@echo '  build-all  - build every profile x every target (./kickstart.py -q)'
@@ -20,6 +20,7 @@ help:
 
 lint:
 	ruff check .
+	yamllint $$(git ls-files '*.yaml' '*.yml')
 
 format:
 	ruff format .

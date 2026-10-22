@@ -1,3 +1,4 @@
+---
 # Example / template config for kickstart.py.
 # Copy this file, rename it (without the leading _), and pass it with -c.
 # Run `python3 kickstart.py --help-config` for the full schema reference.

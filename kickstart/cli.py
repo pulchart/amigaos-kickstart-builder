@@ -12,7 +12,7 @@ from .config import Cfg
 from .errors import die
 from .paths import CONFIG_DIR, OUT_DIR
 
-__version__ = "2.2"
+__version__ = "2.3"
 
 
 _TARGETS_HELP = """\
@@ -99,6 +99,17 @@ kickstart.yaml schema reference:
 
   Note: adf_path values are case-sensitive (Capitoline does an exact-case
   lookup inside the ADF).  A mismatch causes the build to fail hard.
+
+cpu:
+  Optional top-level key: CPU used to select rows, replacing the model's own
+  `cpu` for every model.  `cpu: "68080"` makes a profile 68080-only, whichever
+  Kickstart it is built for.
+
+rom_order:
+  Optional top-level key: order of the two banks in <name>.rom.  "F8E0"
+  (default) puts F8 first, "E0F8" puts E0 first, as Apollo's ApolloMap and
+  ApolloFlash expect.  The .F8 and .E0 files and the A1200 .hi/.lo bins are
+  not affected.
 
 models / models_from:
   The config file must contain either an inline ``models:`` dict or a

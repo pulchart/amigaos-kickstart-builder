@@ -1,0 +1,33 @@
+# ROM for Apollo 68080 Accelerator. E0 half ApolloMap expects as first. Mapping via `ApolloMap BOOT:Devs/kickstarts/apollo.rom`
+cpu: "68080"
+rom_order: "E0F8"
+
+models_from: _models.yaml
+
+modules:
+  - {adf: "/opt/AmigaOS/Update3.2.3/ADFs/ModulesA1200_3.2.3.adf", adf_path: "LIBS/workbench.library", os: "3.2.3", rom: "E0"}
+
+  - {adf: "/opt/AmigaOS/AmigaOS3.2/adf/workbench3.2.adf", adf_path: "Libs/rexxsyslib.library", os: "3.2.3", rom: "E0"}
+  - {adf: "/opt/AmigaOS/AmigaOS3.1/ADFs/wbench31.adf",    adf_path: "Libs/rexxsyslib.library", os: "3.1",   rom: "E0"}
+
+  - {skip: "icon.library"}
+  - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/icon.library", rom: "E0"}
+
+  - {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio-20260913-1-080-gcc6", as: "pfs3aio", cpu: "68080", rom: "E0"}
+
+  - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem", os: "3.1",   rom: "E0"}
+
+  - {file: "/opt/AmigaOS/fat95/4.1/68080/fat95", cpu: "68080", rom: "E0"}
+
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/libs/ptable.library", os: "3.2.3", rom: "F8"}
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/libs/ptable.library", os: "3.1",   rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/libs/ptable.library", os: "2.05",  rom: "E0"}
+
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/devs/compactflash.device", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/devs/compactflash.device", os: "3.1",   rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/devs/compactflash.device", os: "2.05",  rom: "E0"}
+
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/libs/compactflash.automount", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/libs/compactflash.automount", os: "3.1",   rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/2.1/small/68020/libs/compactflash.automount", os: "2.05",  rom: "E0"}

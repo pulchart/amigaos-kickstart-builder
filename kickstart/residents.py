@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import struct
+import textwrap
 from collections import defaultdict
 from pathlib import Path
 
@@ -173,7 +174,7 @@ def _print_residents(model: str, residents: list[dict], rom_name: str = "ROM") -
     Binary audit: every Resident structure found in the ROM is listed.
     Same-name entries at lower rt_Version are annotated as shadowed (they lose
     the ResidentMatcher race at boot to the higher-version copy); the note is
-    printed dim and italic on its own line under the IDString.
+    printed dim and italic under the IDString, which wraps instead of being cut.
     """
     head = ("Bank", "Addr", "Type", "Ver", "Pri", "Name")
     rows = [
@@ -209,10 +210,10 @@ def _print_residents(model: str, residents: list[dict], rom_name: str = "ROM") -
     print("  " + line(head) + "  IDString")
     print("  " + "  ".join("-" * w for w in widths) + "  " + "-" * id_width)
     for row, r in zip(rows, residents, strict=True):
-        idstring = r["idstring"]
-        if len(idstring) > id_width:
-            idstring = idstring[: id_width - 3] + "..."
-        print("  " + line(row) + "  " + idstring)
+        first, *more = textwrap.wrap(r["idstring"], id_width) or [""]
+        print("  " + line(row) + "  " + first)
+        for rest in more:
+            print(" " * id_at + rest)
         if r.get("note"):
             print(" " * id_at + _c(r["note"], _DIM, _ITALIC))
     print()

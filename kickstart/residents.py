@@ -168,6 +168,10 @@ def _annotate_residents(residents: list[dict]) -> None:
                     c["note"] = f"shadowed -> {winner['bank']} v{max_ver}"
 
 
+# Report columns and their alignment ("<" left, ">" right).
+_COLUMNS = {"Bank": "<", "Addr": "<", "Type": "<", "Ver": ">", "Pri": ">", "Name": "<"}
+
+
 def _print_residents(model: str, residents: list[dict], rom_name: str = "ROM") -> None:
     """Print the ROM resident report.
 
@@ -176,29 +180,27 @@ def _print_residents(model: str, residents: list[dict], rom_name: str = "ROM") -
     the ResidentMatcher race at boot to the higher-version copy); the note is
     printed dim and italic under the IDString, which wraps instead of being cut.
     """
-    head = ("Bank", "Addr", "Type", "Ver", "Pri", "Name")
     rows = [
-        (
-            r["bank"],
-            f"{r['rom_addr']:06X}",
-            r["type_name"],
-            str(r["version"]),
-            str(r["pri"]),
-            r["name"],
-        )
+        {
+            "Bank": r["bank"],
+            "Addr": f"{r['rom_addr']:06X}",
+            "Type": r["type_name"],
+            "Ver": r["version"],
+            "Pri": r["pri"],
+            "Name": r["name"],
+        }
         for r in residents
     ]
-    widths = [max(map(len, col)) for col in zip(head, *rows, strict=True)]
-    right = (3, 4)  # Ver and Pri
+    width = {c: max(len(c), *(len(str(row[c])) for row in rows)) for c in _COLUMNS}
 
-    def line(cells) -> str:
-        return "  ".join(
-            c.rjust(w) if i in right else c.ljust(w)
-            for i, (c, w) in enumerate(zip(cells, widths, strict=True))
-        )
+    def line(row: dict) -> str:
+        return "  ".join(f"{row[c]:{align}{width[c]}}" for c, align in _COLUMNS.items())
+
+    header = line({c: c for c in _COLUMNS})
+    rule = line({c: "-" * width[c] for c in _COLUMNS})
 
     # IDString gets the terminal width left over by the other columns.
-    id_at = 2 + sum(widths) + 2 * len(widths)
+    id_at = 2 + len(header) + 2
     id_width = max(40, shutil.get_terminal_size((160, 24)).columns - id_at - 1)
 
     n_shadowed = sum(1 for r in residents if r.get("note"))
@@ -207,11 +209,11 @@ def _print_residents(model: str, residents: list[dict], rom_name: str = "ROM") -
         summary += f", {n_shadowed} shadowed by higher version"
 
     print(f"\n  Residents in {rom_name}: {model} ({summary}):")
-    print("  " + line(head) + "  IDString")
-    print("  " + "  ".join("-" * w for w in widths) + "  " + "-" * id_width)
+    print(f"  {header}  IDString")
+    print(f"  {rule}  {'-' * id_width}")
     for row, r in zip(rows, residents, strict=True):
         first, *more = textwrap.wrap(r["idstring"], id_width) or [""]
-        print("  " + line(row) + "  " + first)
+        print(f"  {line(row)}  {first}")
         for rest in more:
             print(" " * id_at + rest)
         if r.get("note"):

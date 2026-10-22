@@ -51,19 +51,21 @@ _RT_STRUCT_MIN_BYTES = 26
 _CSTR_FALLBACK_LEN = 256
 
 
-def _rom_offset_to_addr(offset: int) -> int:
+def _rom_offset_to_addr(offset: int, e0_first: bool = False) -> int:
     """Map a byte offset in the ROM binary -> Amiga ROM address."""
+    first, second = (_ROM_E0_BASE, _ROM_F8_BASE) if e0_first else (_ROM_F8_BASE, _ROM_E0_BASE)
     if offset < _ROM_HALF:
-        return _ROM_F8_BASE + offset
-    return _ROM_E0_BASE + (offset - _ROM_HALF)
+        return first + offset
+    return second + (offset - _ROM_HALF)
 
 
-def _rom_addr_to_offset(addr: int) -> int | None:
+def _rom_addr_to_offset(addr: int, e0_first: bool = False) -> int | None:
     """Map an Amiga ROM address -> byte offset in the ROM binary; None if outside both banks."""
-    if _ROM_F8_BASE <= addr < _ROM_F8_BASE + _ROM_HALF:
-        return addr - _ROM_F8_BASE
-    if _ROM_E0_BASE <= addr < _ROM_E0_BASE + _ROM_HALF:
-        return (addr - _ROM_E0_BASE) + _ROM_HALF
+    first, second = (_ROM_E0_BASE, _ROM_F8_BASE) if e0_first else (_ROM_F8_BASE, _ROM_E0_BASE)
+    if first <= addr < first + _ROM_HALF:
+        return addr - first
+    if second <= addr < second + _ROM_HALF:
+        return (addr - second) + _ROM_HALF
     return None
 
 
@@ -87,17 +89,18 @@ def _read_cstring(data: bytes, off: int | None) -> str:
         return "?"
 
 
-def scan_residents(rom_path: Path) -> list[dict]:
+def scan_residents(rom_path: Path, e0_first: bool = False) -> list[dict]:
     """Scan a 1 MB Amiga Kickstart ROM binary for Resident structures.
 
     Scans every even offset for RTC_MATCHWORD (0x4AFC), then validates the
     self-pointer (rt_MatchTag must equal the ROM address of the match word).
 
-    Address mapping for the combined 1 MB ROM binary:
+    Address mapping for the combined 1 MB ROM binary (default order):
       - File bytes 0x00000-0x7FFFF: F8 bank (Amiga 0xF80000-0xFFFFFF)
       - File bytes 0x80000-0xFFFFF: E0 bank (Amiga 0xE00000-0xE7FFFF)
+    With `e0_first` the two banks swap places in the file.
 
-    Returns a list of dicts (F8-first, E0-second, in discovery order) with
+    Returns a list of dicts (in file order, discovery order within a bank) with
     keys: bank, rom_addr, rt_type, type_name, version, pri, name, idstring.
     """
     data = rom_path.read_bytes()
@@ -108,18 +111,22 @@ def scan_residents(rom_path: Path) -> list[dict]:
     i = 0
     while i <= n - _RT_STRUCT_MIN_BYTES:
         if data[i] == mw_hi and data[i + 1] == mw_lo:
-            rom_addr = _rom_offset_to_addr(i)
+            rom_addr = _rom_offset_to_addr(i, e0_first)
             tag_addr = struct.unpack_from(">I", data, i + _RT_OFF_MATCHTAG)[0]
             if tag_addr == rom_addr:
                 endskip_addr = struct.unpack_from(">I", data, i + _RT_OFF_ENDSKIP)[0]
                 rt_type = data[i + _RT_OFF_TYPE]
                 version = data[i + _RT_OFF_VERSION]
                 pri = struct.unpack_from(">b", data, i + _RT_OFF_PRI)[0]
-                name_off = _rom_addr_to_offset(struct.unpack_from(">I", data, i + _RT_OFF_NAME)[0])
-                id_off = _rom_addr_to_offset(
-                    struct.unpack_from(">I", data, i + _RT_OFF_IDSTRING)[0]
+                name_off = _rom_addr_to_offset(
+                    struct.unpack_from(">I", data, i + _RT_OFF_NAME)[0], e0_first
                 )
-                bank = "F8" if i < _ROM_HALF else "E0"
+                id_off = _rom_addr_to_offset(
+                    struct.unpack_from(">I", data, i + _RT_OFF_IDSTRING)[0], e0_first
+                )
+                bank = (
+                    ("E0" if e0_first else "F8") if i < _ROM_HALF else ("F8" if e0_first else "E0")
+                )
                 results.append(
                     {
                         "bank": bank,

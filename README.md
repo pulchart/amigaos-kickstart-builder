@@ -71,19 +71,19 @@ For the technical details behind the scantable patches, see [docs/kickstart-scan
 # override the output basename
 ./kickstart.py -c bare -n myrom a600
 
-# build for a machine with an accelerator
-./kickstart.py -c cfd -a 68080 a1200-3.2.3
+# 68080 ROM for Apollo (E0 half first)
+./kickstart.py -c apollo a1200-3.2.3
 ```
 
 `-c` accepts a shortname (resolved against `config/<name>.yaml`) or a full path.
 
-`-a` names an accelerator CPU. Module rows pinning it win; modules without such a row follow the model's own CPU, so the ROM is otherwise the model's. The output basename gains `.<CPU>`, leaving the plain build in place.
+`-a` names an accelerator CPU. Module rows pinning it win; modules without such a row follow the model's own CPU, so the ROM is otherwise the model's. The output basename gains `.<CPU>`, leaving the plain build in place. A config can set `cpu: "<CPU>"`, which replaces the model's own CPU for row selection on every Kickstart (the `apollo` profile sets `68080`).
 
 Output lands in `out/<name>/<MODEL>/` where `<name>` is the config stem (or `-n` override) and `<MODEL>` is one of `A600-3.2.3`, `A1200-3.2.3`, `A600-3.1`, `A1200-3.1`, `A600-2.05`, `A500plus-2.04`:
 
 | File | Description |
 |---|---|
-| `<name>.rom` | 1 MB merged image (F8 ROM concatenated with E0 ROM) |
+| `<name>.rom` | 1 MB merged image (F8 ROM concatenated with E0 ROM; E0 first when the profile sets `rom_order: "E0F8"`, as `apollo.yaml` does) |
 | `<name>.F8` | F8 half (512 KB at `0xF80000`): base AmigaOS modules |
 | `<name>.E0` | E0 half (512 KB at `0xE00000`): extra modules (rexxsyslib, pfs3aio, fat95, compactflash.device, ...) |
 | `<name>.hi.bin`, `<name>.lo.bin` | (A1200 only) byteswapped halves for the A1200's two physical Kickstart chips |
@@ -110,11 +110,12 @@ If the table is missing or any row looks wrong, check `capitoline.log` in the sa
 
 ## Config profiles
 
-Three profiles are bundled under `config/`. All share the same hardware model definitions (`config/_models.yaml`); only the `modules:` list differs.
+Profiles are bundled under `config/`. All share the same hardware model definitions (`config/_models.yaml`); only the `modules:` list differs.
 
 | Profile | Command | What it adds to E0 (and F8) |
 |---|---|---|
 | `cfd.yaml` | `./kickstart.py -c cfd` | workbench.library, icon.library, rexxsyslib, pfs3aio, sfs, fat95, **compactflash.device + ptable.library** (cfd; 3.2.3 / 3.1 / 2.05 only) |
+| `apollo.yaml` | `./kickstart.py -c apollo a1200-3.2.3` | `cpu: "68080"` for every Kickstart (68080 pfs3aio and fat95, cfd modules as 68020); `apollo.rom` has the E0 half first, map it with `ApolloMap` |
 | `bare.yaml` | `./kickstart.py -c bare` | AmigaOS's native rom extension: workbench.library, icon.library (stock), rexxsyslib |
 | `iconlib.yaml` | `./kickstart.py -c iconlib` | workbench.library, **icon.library 46.4.602** (replaces stock), rexxsyslib, pfs3aio, sfs |
 

@@ -267,12 +267,17 @@ def _prepare_workdir(model: str, model_cfg: dict) -> Path:
     return workdir
 
 
+def _effective_cpu(cfg: Cfg, model_cfg: dict) -> str:
+    """CPU used to select module rows: the config's `cpu` key, else the model's."""
+    return cfg.config.get("cpu") or model_cfg["cpu"]
+
+
 def _build_in_workdir(
     cfg: Cfg, model: str, model_cfg: dict, workdir: Path, accel: str | None = None
 ) -> _BuildArtefacts:
     """Resolve modules, render the capcli script, run capcli; return the produced artefacts."""
     modules_by_rom, patched_modules = resolve_extra_modules(
-        cfg, workdir, model_cfg["cpu"], model_cfg["os"], accel
+        cfg, workdir, _effective_cpu(cfg, model_cfg), model_cfg["os"], accel
     )
     script = render_template(workdir, model_cfg, model, modules_by_rom, patched_modules)
     log = run_capcli(workdir, script)
@@ -287,7 +292,9 @@ def _build_in_workdir(
     return _BuildArtefacts(workdir=workdir, script=script, log=log, f8=f8, e0=e0)
 
 
-def _finalise_output(artefacts: _BuildArtefacts, model: str, name: str, verbose: bool) -> None:
+def _finalise_output(
+    artefacts: _BuildArtefacts, model: str, name: str, verbose: bool, e0_first: bool = False
+) -> None:
     """Stage workdir outputs into out/<name>/<model>/, print the SHA + free-space report, audit residents."""
     workdir = artefacts.workdir
     model_out = (OUT_DIR / name / model).resolve()
@@ -296,9 +303,10 @@ def _finalise_output(artefacts: _BuildArtefacts, model: str, name: str, verbose:
     model_out.mkdir(parents=True)
 
     rom = model_out / f"{name}.rom"
+    banks = (artefacts.e0, artefacts.f8) if e0_first else (artefacts.f8, artefacts.e0)
     with rom.open("wb") as out:
-        out.write(artefacts.f8.read_bytes())
-        out.write(artefacts.e0.read_bytes())
+        for bank in banks:
+            out.write(bank.read_bytes())
 
     shutil.copy2(artefacts.e0, model_out / f"{name}.E0")
     shutil.copy2(artefacts.f8, model_out / f"{name}.F8")
@@ -345,7 +353,7 @@ def _finalise_output(artefacts: _BuildArtefacts, model: str, name: str, verbose:
             free_s = " " * (fw + 7)
         print(f"    {fname}  {tag_s}  {sz:>12,} bytes  {free_s}  {sha}")
     if verbose:
-        residents = scan_residents(rom)
+        residents = scan_residents(rom, e0_first)
         _annotate_residents(residents)
         _print_residents(model, residents, rom.name)
 
@@ -355,7 +363,7 @@ def build_one(
 ) -> None:
     """Build one ROM for *model* using *cfg*. Output lands in ``out/<name>/<model>/``."""
     model_cfg = cfg.models[model]
-    cpu = model_cfg["cpu"]
+    cpu = _effective_cpu(cfg, model_cfg)
     os_ = model_cfg["os"]
     cpu_s = f"{cpu} +{accel}" if accel else cpu
 
@@ -371,7 +379,9 @@ def build_one(
     workdir = _prepare_workdir(model, model_cfg)
     try:
         artefacts = _build_in_workdir(cfg, model, model_cfg, workdir, accel)
-        _finalise_output(artefacts, model, name, verbose)
+        _finalise_output(
+            artefacts, model, name, verbose, cfg.config.get("rom_order", "F8E0") == "E0F8"
+        )
     except BaseException:
         # Keep the workdir on failure so the capcli log/script referenced in
         # the error message survive for inspection (a fresh build of this

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import shutil
 import struct
 from collections import defaultdict
 from pathlib import Path
 
-from tabulate import tabulate
+from .colour import _DIM, _ITALIC, _c
 
 _NT_NAMES: dict[int, str] = {
     1: "task",
@@ -167,47 +168,51 @@ def _annotate_residents(residents: list[dict]) -> None:
 
 
 def _print_residents(model: str, residents: list[dict], rom_name: str = "ROM") -> None:
-    """Print a tabulated ROM resident report using tabulate.
+    """Print the ROM resident report.
 
     Binary audit: every Resident structure found in the ROM is listed.
     Same-name entries at lower rt_Version are annotated as shadowed (they lose
-    the ResidentMatcher race at boot to the higher-version copy).
+    the ResidentMatcher race at boot to the higher-version copy); the note is
+    printed dim and italic on its own line under the IDString.
     """
-    ID_COL = 50
-
-    def trunc(s: str, n: int) -> str:
-        return s if len(s) <= n else s[: n - 1] + "..."
-
-    has_notes = any(r.get("note") for r in residents)
-    headers = ["Bank", "Addr", "Type", "Ver", "Pri", "Name", "IDString"]
-    if has_notes:
-        headers.append("Notes")
-
-    rows = []
-    for r in residents:
-        row: list = [
+    head = ("Bank", "Addr", "Type", "Ver", "Pri", "Name")
+    rows = [
+        (
             r["bank"],
             f"{r['rom_addr']:06X}",
             r["type_name"],
-            r["version"],
-            r["pri"],
+            str(r["version"]),
+            str(r["pri"]),
             r["name"],
-            trunc(r["idstring"], ID_COL),
-        ]
-        if has_notes:
-            row.append(r.get("note", ""))
-        rows.append(row)
+        )
+        for r in residents
+    ]
+    widths = [max(map(len, col)) for col in zip(head, *rows, strict=True)]
+    right = (3, 4)  # Ver and Pri
+
+    def line(cells) -> str:
+        return "  ".join(
+            c.rjust(w) if i in right else c.ljust(w)
+            for i, (c, w) in enumerate(zip(cells, widths, strict=True))
+        )
+
+    # IDString gets the terminal width left over by the other columns.
+    id_at = 2 + sum(widths) + 2 * len(widths)
+    id_width = max(40, shutil.get_terminal_size((160, 24)).columns - id_at - 1)
 
     n_shadowed = sum(1 for r in residents if r.get("note"))
     summary = f"{len(residents)} found"
     if n_shadowed:
         summary += f", {n_shadowed} shadowed by higher version"
 
-    align = ("left", "left", "left", "right", "right", "left", "left")
-    if has_notes:
-        align = (*align, "left")
-
     print(f"\n  Residents in {rom_name}: {model} ({summary}):")
-    for line in tabulate(rows, headers=headers, tablefmt="simple", colalign=align).splitlines():
-        print("  " + line)
+    print("  " + line(head) + "  IDString")
+    print("  " + "  ".join("-" * w for w in widths) + "  " + "-" * id_width)
+    for row, r in zip(rows, residents, strict=True):
+        idstring = r["idstring"]
+        if len(idstring) > id_width:
+            idstring = idstring[: id_width - 3] + "..."
+        print("  " + line(row) + "  " + idstring)
+        if r.get("note"):
+            print(" " * id_at + _c(r["note"], _DIM, _ITALIC))
     print()

@@ -20,7 +20,7 @@ Originally written to bake `compactflash.device` + `ptable.library` ([cfd projec
 
 ```sh
 # or your distro's equivalent
-sudo dnf install python3-jinja2 python3-pyyaml python3-tabulate unzip lha
+sudo dnf install python3-jinja2 python3-pyyaml unzip lha
 
 # install Capitoline + at least one AmigaOS source (see Prerequisites)
 
@@ -34,7 +34,7 @@ The builder runs on Linux and shells out to [Capitoline](http://capitoline.twoca
 
 | # | Prerequisite | Install at | Needed by |
 |---|---|---|---|
-| 1 | Python 3.10+ with `jinja2`, `pyyaml`, `tabulate` | system packages | all configs |
+| 1 | Python 3.10+ with `jinja2`, `pyyaml` | system packages | all configs |
 | 2 | [Capitoline](http://capitoline.twocatsblack.com/index.php/download/) (`capcli.Linux`, `Components/`, `Capitoline Hashes/`) | `/opt/Capitoline/` | all configs |
 | 3 | [Hyperion AmigaOS 3.2.3 Update](https://www.hyperion-entertainment.com/index.php/downloads) (`ROMs/`, `ADFs/`) | `/opt/AmigaOS/Update3.2.3/` | any 3.2.3 target |
 | 4 | Workbench 3.2 ADF (`workbench3.2.adf`) | `/opt/AmigaOS/AmigaOS3.2/adf/` | `cfd.yaml`, `bare.yaml`, `iconlib.yaml` (rexxsyslib.library for 3.2.3) |

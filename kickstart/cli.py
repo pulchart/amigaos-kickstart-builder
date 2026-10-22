@@ -12,7 +12,7 @@ from .config import Cfg
 from .errors import die
 from .paths import CONFIG_DIR, OUT_DIR
 
-__version__ = "2.3"
+__version__ = "2.4"
 
 
 _TARGETS_HELP = """\

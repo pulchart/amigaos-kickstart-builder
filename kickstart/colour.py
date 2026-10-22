@@ -7,6 +7,8 @@ import sys
 _COLOR = sys.stdout.isatty()
 
 _BOLD = "\033[1m"
+_DIM = "\033[2m"
+_ITALIC = "\033[3m"
 _CYAN = "\033[36m"
 _GREEN = "\033[32m"
 _YELLOW = "\033[33m"

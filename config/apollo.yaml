@@ -1,4 +1,7 @@
-# ROM for Apollo 68080 Accelerator. E0 half ApolloMap expects as first. Mapping via `ApolloMap BOOT:Devs/kickstarts/apollo.rom`
+---
+# ROM for Apollo 68080 Accelerator:
+# * E0 half ApolloMap expects as first.
+# * Mapping via `ApolloMap BOOT:Devs/kickstarts/apollo.rom`
 cpu: "68080"
 rom_order: "E0F8"
 

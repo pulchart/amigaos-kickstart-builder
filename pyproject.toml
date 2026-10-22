@@ -29,6 +29,7 @@ classifiers = [
 [project.optional-dependencies]
 dev = [
     "ruff",
+    "yamllint",
     "pytest",
     "pre-commit",
 ]

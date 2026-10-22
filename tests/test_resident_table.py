@@ -32,10 +32,14 @@ def test_note_is_printed_under_the_idstring(capsys):
     assert len(lines[row + 1]) - len(lines[row + 1].lstrip()) == header.index("IDString")
 
 
-def test_long_idstring_is_not_cut_at_fifty(capsys):
-    idstring = "x" * 90
+def test_long_idstring_wraps_instead_of_being_cut(capsys, monkeypatch):
+    monkeypatch.setenv("COLUMNS", "100")
+    idstring = " ".join(["word"] * 40)
     _print_residents("A1200", [_res("E0", 0xE00000, 1, "a", idstring)])
-    assert idstring in capsys.readouterr().out
+    lines = capsys.readouterr().out.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.lstrip().startswith("E0 "))
+    text = " ".join(line.strip().split("  ")[-1] for line in lines[start : start + 4])
+    assert text.count("word") == 40
 
 
 def test_report_fits_the_terminal_width(capsys, monkeypatch):

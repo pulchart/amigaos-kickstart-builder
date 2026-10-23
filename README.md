@@ -93,17 +93,22 @@ Output lands in `out/<name>/<MODEL>/` where `<name>` is the config stem (or `-n`
 A successful run ends with a resident-module table like this (truncated):
 
 ```text
-Residents in cfd.rom: A1200-3.2.3 (53 found, 2 shadowed by higher version):
-  Bank    Addr    Type      Ver    Pri  Name                     IDString                                              Notes
-  ------  ------  ------  -----  -----  -----------------------  ----------------------------------------------------  ------------------
-  F8      F80000  lib        47      0  exec.library             exec 47.13 (1.1.2025)
+Residents in cfd.rom: A1200-3.2.3 (55 found, 2 shadowed by higher version):
+  Bank  Addr    Type  Ver   Pri  Name                     IDString
+  ----  ------  ----  ---  ----  -----------------------  ---------------------------------------------------
+  F8    F80042  lib    47   105  exec.library             exec 47.13 (1.1.2025)
   ...
-  F8      FFCB78  lib        40   -120  workbench.library        workbench.library 47.42 (1.1.2025)                    shadowed -> E0 v47
-  E0      E00014  lib        47   -120  workbench.library        workbench.library 47.42 (1.1.2025)
-  E0      E352F8  lib        47      0  rexxsyslib.library       rexxsyslib 47.2 (19.8.2019)
-  E0      E3DDBA  t0         20     78  pfs3aio                  Professional-File-System-III 20.0 PFS3AIO-VERSION...
-  E0      E4CB1A  t0          3      0  fat95                    fat95 3.23 (19.05.2026) [68020]
-  E0      E538A0  dev         1     21  compactflash.device      compactflash.device 1.43 (19.05.2026) [68020]
+  F8    FFCB78  lib    40  -120  workbench.library        workbench.library 47.42 (1.1.2025)
+                                                          shadowed -> E0 v47
+  ...
+  E0    E00014  lib    47  -120  workbench.library        workbench.library 47.42 (1.1.2025)
+  E0    E2C940  lib    47     0  rexxsyslib.library       rexxsyslib 47.2 (19.8.2019)
+  E0    E3EC40  t0     20    78  pfs3aio                  Professional-File-System-III 20.0
+                                                          [gcc16.1/020][020+][jpu/20260902-1] PFS3AIO-VERSION
+                                                          (2.9.2026) written by Michiel Pelt and copyright
+                                                          (c) 1994-2012 Peltin BV
+  E0    E65766  t0      4     0  fat95                    fat95 4.1 (30.09.2026) [68020]
+  E0    E6CC44  dev     2    21  compactflash.device      compactflash.device 2.1 (30.09.2026) [68020]
 ```
 
 If the table is missing or any row looks wrong, check `capitoline.log` in the same output directory.

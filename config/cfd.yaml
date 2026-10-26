@@ -13,8 +13,8 @@ modules:
 
   # icon.library from IconLIB:
   - {skip: "icon.library"}  # omit the stock icon.library (<=3.1)
-  - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/icon.library",       cpu: "68020", rom: "E0"}
-  - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/68000/icon.library", cpu: "68000", rom: "E0"}
+  - {file: "/opt/AmigaOS/IconLib/46.4.604/Libs/icon.library",       cpu: "68020", rom: "E0"}
+  - {file: "/opt/AmigaOS/IconLib/46.4.604/Libs/68000/icon.library", cpu: "68000", rom: "E0"}
 
   # Filesystems:
   - {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio-20261023-2-000-gcc16",   as: "pfs3aio",               rom: "E0"}

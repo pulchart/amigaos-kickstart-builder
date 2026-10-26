@@ -14,7 +14,7 @@ modules:
   - {adf: "/opt/AmigaOS/AmigaOS3.1/ADFs/wbench31.adf",    adf_path: "Libs/rexxsyslib.library", os: "3.1",   rom: "E0"}
 
   - {skip: "icon.library"}
-  - {file: "/opt/AmigaOS/IconLib/46.4.602/Libs/icon.library", rom: "E0"}
+  - {file: "/opt/AmigaOS/IconLib/46.4.604/Libs/icon.library", rom: "E0"}
 
   - {file: "/opt/AmigaOS/pfs/v20.0/pfs3aio-20261023-2-080-gcc6", as: "pfs3aio", cpu: "68080", rom: "E0"}
 

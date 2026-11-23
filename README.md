@@ -1,4 +1,4 @@
-# amigaos-kickstart-builder
+con# amigaos-kickstart-builder
 
 YAML-driven builder for custom **1 MB AmigaOS Kickstart ROMs** with optional embedded modules. Drives Capitoline `capcli.Linux` from a single per-model config, supports AmigaOS 3.2.3, 3.1, 2.05, and 2.04 source ROMs, and lets you slot extra modules (filesystem handlers, drivers, libraries) into the E0 bank, or substitute / skip / relocate stock modules in F8.
 
@@ -45,7 +45,7 @@ The builder runs on Linux and shells out to [Capitoline](http://capitoline.twoca
 | 9 | [fat95](https://github.com/pulchart/fat95/releases) (68000 + 68020) + `ptable.library` | `/opt/AmigaOS/fat95/4.1/{68000,68020}/` | `cfd.yaml` only |
 | 10 | [cfd](https://github.com/pulchart/cfd/releases) `compactflash.device` + `ptable.library` + `compactflash.automount` | `/opt/AmigaOS/cfd/2.1/{full,small}/{68000,68020}/{devs,libs}/` | `cfd.yaml` only (3.2.3 / 3.1 / 2.05; A500plus-2.04 omitted, no PCMCIA or IDE) |
 | 11 | sfs [1.279](https://aminet.net/package/disk/misc/SFS) or [1.279](http://strohmayer.org/sfs/files/SFS_1.279_68k.lha) + [SFS_Fix.lha (1.279->1.280 patch)](http://www.doobreynet.co.uk/files/amiga/SFS_Fix.lha) | `/opt/AmigaOS/sfs/v1.279/SmartFilesystem` | `cfd.yaml`, `iconlib.yaml` |
-| 12 | [IconLib 46.4](https://aminet.net/package/util/libs/IconLib_46.4) (`icon.library` 68000 + 68020) | `/opt/AmigaOS/IconLib/46.4.602/Libs/{,68000/}icon.library` | `cfd.yaml`, `iconlib.yaml` |
+| 12 | [IconLib 46.4](https://aminet.net/package/util/libs/IconLib_46.4) (`icon.library` 68000 + 68020) | `/opt/AmigaOS/IconLib/46.4.605/Libs/{,68000/}icon.library` | `cfd.yaml`, `iconlib.yaml` |
 
 
 If a required prerequisite for a target you're building is missing, the script reports an error and stops. Targets you don't build don't need their source trees. Capitoline / ROMs / ADFs are user-supplied (none are bundled here).

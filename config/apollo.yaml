@@ -21,16 +21,16 @@ modules:
   - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem", os: "3.2.3", rom: "E0"}
   - {file: "/opt/AmigaOS/sfs/v1.280/SmartFilesystem", os: "3.1",   rom: "E0"}
 
-  - {file: "/opt/AmigaOS/fat95/4.2/68080/fat95", cpu: "68080", rom: "E0"}
+  - {file: "/opt/AmigaOS/fat95/5.0/68080/fat95", cpu: "68080", rom: "E0"}
 
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/libs/ptable.library", os: "3.2.3", rom: "F8"}
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/libs/ptable.library", os: "3.1",   rom: "E0"}
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/libs/ptable.library", os: "2.05",  rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/libs/ptable.library", os: "3.2.3", rom: "F8"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/libs/ptable.library", os: "3.1",   rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/libs/ptable.library", os: "2.05",  rom: "E0"}
 
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/devs/compactflash.device", os: "3.2.3", rom: "E0"}
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/devs/compactflash.device", os: "3.1",   rom: "E0"}
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/devs/compactflash.device", os: "2.05",  rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/devs/compactflash.device", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/devs/compactflash.device", os: "3.1",   rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/devs/compactflash.device", os: "2.05",  rom: "E0"}
 
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/libs/compactflash.automount", os: "3.2.3", rom: "E0"}
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/libs/compactflash.automount", os: "3.1",   rom: "E0"}
-  - {file: "/opt/AmigaOS/cfd/2.2/small/68020/libs/compactflash.automount", os: "2.05",  rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/libs/compactflash.automount", os: "3.2.3", rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/libs/compactflash.automount", os: "3.1",   rom: "E0"}
+  - {file: "/opt/AmigaOS/cfd/3.0/small/68020/libs/compactflash.automount", os: "2.05",  rom: "E0"}
